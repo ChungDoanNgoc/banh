@@ -1,0 +1,335 @@
+[
+  {
+    "id": "admin",
+    "role": "ADMIN",
+    "username": "admin",
+    "createdAt": "2026-07-25T04:34:33.806Z",
+    "name": "admin",
+    "passwordHash": "$2a$12$lwEQRV5Gll1kymKKGzbcU.KNDPMJu3SACDIAwSlImjDQ597IQSBTO",
+    "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"
+  },
+  {
+    "id": "annt42",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784696914,
+      "nanoseconds": 856000000
+    },
+    "name": "annt42",
+    "username": "annt42",
+    "password": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+    "role": "USER"
+  },
+  {
+    "id": "baokt_pro_vip",
+    "name": "BaoKT_Pro_Vip",
+    "username": "baokt_pro_vip",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784700861,
+      "nanoseconds": 526000000
+    },
+    "role": "USER",
+    "password": "96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b838858cdd6ca0a1e"
+  },
+  {
+    "id": "bichhnn",
+    "username": "bichhnn",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "USER",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784872999,
+      "nanoseconds": 521000000
+    },
+    "name": "BichHNN"
+  },
+  {
+    "id": "bimpd2",
+    "username": "bimpd2",
+    "role": "USER",
+    "password": "b2de0e2e631737084c384f0a386309c4f79a64b6c73dcc75d99893c1a717cd7d",
+    "name": "bimpd2",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784700534,
+      "nanoseconds": 792000000
+    }
+  },
+  {
+    "id": "chou",
+    "username": "chou",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784874684,
+      "nanoseconds": 60000000
+    },
+    "name": "Chou",
+    "password": "3757a839f82e8c3cb9bf868c0c32c97c82afc7b5b5f03ae16236e3b9f920dc3f",
+    "role": "USER"
+  },
+  {
+    "id": "chung",
+    "username": "chung",
+    "password": "1cfc5cbec68acc7b847dffde6aa17498ca6e54715e820d7f3e68cb868db902c5",
+    "role": "USER",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784697084,
+      "nanoseconds": 402000000
+    },
+    "name": "Chung"
+  },
+  {
+    "id": "chungdn",
+    "username": "chungdn",
+    "role": "ADMIN",
+    "password": "e1ff6f6c200ad91624bfa4aff5d580702c4d2929dc76e8d7a97d7346692b86cc",
+    "name": "ChungDN",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784703220,
+      "nanoseconds": 579000000
+    }
+  },
+  {
+    "id": "châu",
+    "username": "châu",
+    "name": "Châu",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784700660,
+      "nanoseconds": 515000000
+    },
+    "role": "ADMIN",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+  },
+  {
+    "id": "dattvh",
+    "username": "dattvh",
+    "name": "DatTVH",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784702152,
+      "nanoseconds": 195000000
+    },
+    "role": "USER",
+    "password": "6460662e217c7a9f899208dd70a2c28abdea42f128666a9b78e6c0c064846493"
+  },
+  {
+    "id": "diem2k6",
+    "username": "diem2k6",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784701052,
+      "nanoseconds": 184000000
+    },
+    "name": "Diem2k6",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "USER"
+  },
+  {
+    "id": "diem2k8",
+    "username": "diem2k8",
+    "role": "USER",
+    "password": "cf5bc3f1f21fb35fd6b88155e5bcba1e9a8575f41e6a134d83d1a821320fee97",
+    "name": "diem2k8",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784700401,
+      "nanoseconds": 993000000
+    }
+  },
+  {
+    "id": "doant1",
+    "username": "doant1",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "USER",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784787866,
+      "nanoseconds": 738000000
+    },
+    "name": "doant1"
+  },
+  {
+    "id": "dungtq5",
+    "username": "dungtq5",
+    "name": "DungTQ5",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784788909,
+      "nanoseconds": 825000000
+    },
+    "role": "USER",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+  },
+  {
+    "id": "duypm1",
+    "username": "duypm1",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "USER",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784701231,
+      "nanoseconds": 801000000
+    },
+    "name": "DuyPM1"
+  },
+  {
+    "id": "hauhv44",
+    "username": "hauhv44",
+    "role": "USER",
+    "password": "6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090",
+    "name": "HauHV44",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784701319,
+      "nanoseconds": 865000000
+    }
+  },
+  {
+    "id": "hieunt103",
+    "username": "hieunt103",
+    "role": "USER",
+    "password": "7ec01948335e933e34540a186a2c2a702727425893998baac1a07316c5926ad9",
+    "name": "HieuNT103",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784858740,
+      "nanoseconds": 739000000
+    }
+  },
+  {
+    "id": "hoanv7",
+    "username": "hoanv7",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "USER",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784769477,
+      "nanoseconds": 215000000
+    },
+    "name": "hoanv7"
+  },
+  {
+    "id": "lamnmn",
+    "username": "lamnmn",
+    "password": "15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225",
+    "role": "USER",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784874018,
+      "nanoseconds": 683000000
+    },
+    "name": "LamNMN"
+  },
+  {
+    "id": "luongnt9",
+    "username": "luongnt9",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784874200,
+      "nanoseconds": 144000000
+    },
+    "name": "LuongNT9",
+    "password": "894cb4a4a6078c85983b65d97a4078d1e8d8501af42400555b46613e2a4fab8f",
+    "role": "USER"
+  },
+  {
+    "id": "nhathm4",
+    "username": "nhathm4",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784700070,
+      "nanoseconds": 397000000
+    },
+    "name": "NhatHM4",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "USER"
+  },
+  {
+    "id": "nhattm17",
+    "username": "nhattm17",
+    "name": "NhatTM17",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784702903,
+      "nanoseconds": 936000000
+    },
+    "role": "USER",
+    "password": "c483e546341aeccb3e2c80148728aca16a220abc4f49362186444e0569333c29"
+  },
+  {
+    "id": "nhuntq3",
+    "username": "nhuntq3",
+    "name": "NhuNTQ3",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784700702,
+      "nanoseconds": 156000000
+    },
+    "role": "USER",
+    "password": "ca88048f94831349caf0cda96da080cef9b18c13acdb20bb417cef7b4b2b5159"
+  },
+  {
+    "id": "suongkute",
+    "username": "suongkute",
+    "role": "USER",
+    "password": "d6292ef13315d9ecbf8228efce37f41f141eefd0af2824f75a46ff0d8d9623b8",
+    "name": "Suongkute",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784697890,
+      "nanoseconds": 204000000
+    }
+  },
+  {
+    "id": "thaotp39",
+    "username": "thaotp39",
+    "name": "ThaoTP39",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784777525,
+      "nanoseconds": 888000000
+    },
+    "role": "USER",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+  },
+  {
+    "id": "tydt",
+    "username": "tydt",
+    "password": "ff863df6b2e358b155a98961b51c48018c8fac525b1980197dce0e35af5c94a5",
+    "role": "USER",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784874950,
+      "nanoseconds": 816000000
+    },
+    "name": "TyDT"
+  },
+  {
+    "id": "vinhnd20",
+    "username": "vinhnd20",
+    "password": "a0ec06301bf1814970a70f89d1d373afdff9a36d1ba6675fc02f8a975f4efaeb",
+    "role": "USER",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784788006,
+      "nanoseconds": 960000000
+    },
+    "name": "VinhND20"
+  },
+  {
+    "id": "vuta4",
+    "username": "vuta4",
+    "role": "USER",
+    "password": "3d18aeb532e67176342386540c1c4085b76ee2a7eeef83549d558af730720091",
+    "name": "VuTA4",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784701302,
+      "nanoseconds": 68000000
+    }
+  }
+]

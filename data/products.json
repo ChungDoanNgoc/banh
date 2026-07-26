@@ -1,0 +1,51 @@
+[
+  {
+    "id": "p1",
+    "name": "Bánh Tiêu",
+    "price": 6000,
+    "flag": 1,
+    "category": "Bánh Tiêu"
+  },
+  {
+    "id": "p2",
+    "name": "Bánh Chuối Chiên",
+    "price": 8000,
+    "flag": 1,
+    "category": "Bánh Chuối"
+  },
+  {
+    "id": "p3",
+    "name": "Bánh Bao Chiên",
+    "price": 10000,
+    "flag": 1,
+    "category": "Bánh Bao"
+  },
+  {
+    "id": "c1",
+    "name": "Cà Phê Đen",
+    "price": 15000,
+    "flag": 2,
+    "category": "Đồ Uống"
+  },
+  {
+    "id": "c2",
+    "name": "Cà Phê Sữa",
+    "price": 18000,
+    "flag": 2,
+    "category": "Đồ Uống"
+  },
+  {
+    "id": "c3",
+    "name": "Bạc Xỉu",
+    "price": 20000,
+    "flag": 2,
+    "category": "Đồ Uống"
+  },
+  {
+    "id": "c4",
+    "name": "Trà Đào Cam Sả",
+    "price": 25000,
+    "flag": 2,
+    "category": "Đồ Uống"
+  }
+]

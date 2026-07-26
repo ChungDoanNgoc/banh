@@ -1,0 +1,15 @@
+[
+  {
+    "id": "ord_1785070627815_tlu68",
+    "customerName": "admin",
+    "category": "pastry",
+    "productName": "Bánh Tiêu",
+    "type": "Bánh Tiêu",
+    "quantity": 1,
+    "unitPrice": 6000,
+    "totalPrice": 6000,
+    "note": "",
+    "isPaid": false,
+    "createdAt": "2026-07-26T12:57:07.815Z"
+  }
+]
