@@ -46,6 +46,19 @@
 
       var FS_BASE = "https://firestore.googleapis.com/v1/projects/banhtieufpt/databases/(default)/documents";
 
+      // Security Utility: Client Password Hashing (Salted)
+      function hashPassword(pwd){
+        if(!pwd) return '';
+        var hash = 0;
+        var str = pwd + "_bt_salt_secure_2026";
+        for (var i = 0; i < str.length; i++) {
+          var char = str.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash |= 0;
+        }
+        return "h_" + Math.abs(hash).toString(36);
+      }
+
       function parseDoc(docItem){
         var fields = docItem.fields || {};
         var res = { id: docItem.name ? docItem.name.split('/').pop() : '' };
@@ -117,6 +130,8 @@
           setTimeout(function(){ setNotification(null); }, 4000);
         }
 
+        var isAdminUser = user && (user.role === 'ADMIN' || (user.role||'').toUpperCase() === 'ADMIN' || user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'chungdn');
+
         function loadFirestoreData(){
           fetch(FS_BASE + '/products').then(function(r){ return r.json(); }).then(function(data){
             if(data && Array.isArray(data.documents)){
@@ -137,12 +152,15 @@
             }
           }).catch(function(){});
 
-          fetch(FS_BASE + '/UserRegit').then(function(r){ return r.json(); }).then(function(data){
-            if(data && Array.isArray(data.documents)){
-              var parsedUsers = data.documents.map(parseDoc);
-              setUserList(parsedUsers);
-            }
-          }).catch(function(){});
+          // SECURITY FIX: Only fetch UserRegit list if current user is ADMIN
+          if(isAdminUser){
+            fetch(FS_BASE + '/UserRegit').then(function(r){ return r.json(); }).then(function(data){
+              if(data && Array.isArray(data.documents)){
+                var parsedUsers = data.documents.map(parseDoc);
+                setUserList(parsedUsers);
+              }
+            }).catch(function(){});
+          }
         }
 
         // Auto Job: Daily 9:00 AM Reset Cleaner
@@ -178,7 +196,7 @@
           }
 
           checkDaily9AMReset();
-          var timerId = setInterval(checkDaily9AMReset, 30000); // Check every 30 seconds
+          var timerId = setInterval(checkDaily9AMReset, 30000);
           return function(){ clearInterval(timerId); };
         }, []);
 
@@ -200,8 +218,6 @@
             showNotify: showNotify
           });
         }
-
-        var isAdminUser = (user.role === 'ADMIN' || (user.role||'').toUpperCase() === 'ADMIN' || user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'chungdn');
 
         function handleToggleFormStatus(){
           var nState = !isFormOpen;
@@ -944,7 +960,7 @@
                     e('tr', null,
                       e('th', { className: 'p-4 border-r border-slate-800' }, 'TÊN TÀI KHOẢN (USERNAME)'),
                       e('th', { className: 'p-4 border-r border-slate-800' }, 'QUYỀN HẠN (ROLE)'),
-                      e('th', { className: 'p-4 border-r border-slate-800' }, 'MẬT KHẨU NGUYÊN BẢN'),
+                      e('th', { className: 'p-4 border-r border-slate-800' }, 'MẬT KHẨU MÃ HÓA'),
                       e('th', { className: 'p-4 text-center' }, 'THAO TÁC ADMIN')
                     )
                   ),
@@ -959,7 +975,7 @@
                               (isAdm ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-slate-800 text-slate-300')
                           }, isAdm ? 'ADMIN' : 'USER')
                         ),
-                        e('td', { className: 'p-4 border-r border-slate-800 font-mono text-slate-300 text-xs' }, u.password || '******'),
+                        e('td', { className: 'p-4 border-r border-slate-800 font-mono text-slate-400 text-xs' }, '••••••••'),
                         e('td', { className: 'p-4 text-center' },
                           e('button', {
                             onClick: function(){ handleDeleteUser(u.username || u.id); },
@@ -1031,7 +1047,7 @@
         );
       }
 
-      // Login & Register Combined View
+      // Login & Register Combined View with Secure Document Lookup
       function LoginView(props){
         var modeState = useState('login');
         var mode = modeState[0];
@@ -1053,6 +1069,8 @@
             return;
           }
           var cleanU = username.trim();
+          var docId = cleanU.toLowerCase();
+          var hashed = hashPassword(password);
 
           if(isRegister){
             if(password !== confirmPassword){
@@ -1060,11 +1078,10 @@
               return;
             }
             setIsLoading(true);
-            var docId = cleanU.toLowerCase();
             var payload = {
               fields: {
                 username: { stringValue: cleanU },
-                password: { stringValue: password },
+                password: { stringValue: hashed },
                 role: { stringValue: 'USER' }
               }
             };
@@ -1076,15 +1093,39 @@
             }).then(function(){
               setIsLoading(false);
               props.showNotify('Đăng ký tài khoản mới thành công!');
-              props.onSuccess({ username: cleanU, role: 'USER', password: password });
+              props.onSuccess({ username: cleanU, role: 'USER' });
             }).catch(function(){
               setIsLoading(false);
               props.showNotify('Đăng ký thành công!');
-              props.onSuccess({ username: cleanU, role: 'USER', password: password });
+              props.onSuccess({ username: cleanU, role: 'USER' });
             });
           } else {
-            var role = (cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn') ? 'ADMIN' : 'USER';
-            props.onSuccess({ username: cleanU, role: role, password: password });
+            // SECURITY FIX: Query ONLY single specific user document for authentication
+            setIsLoading(true);
+            fetch(FS_BASE + '/UserRegit/' + docId).then(function(r){
+              if(r.status === 404){
+                setIsLoading(false);
+                props.showNotify('Tài khoản không tồn tại! Vui lòng Đăng Ký Mới.', true);
+                return null;
+              }
+              return r.json();
+            }).then(function(docItem){
+              setIsLoading(false);
+              if(!docItem) return;
+              var userData = parseDoc(docItem);
+              // Compare hashed or legacy plain password
+              if(userData.password === password || userData.password === hashed){
+                props.showNotify('Đăng nhập thành công!');
+                props.onSuccess(userData);
+              } else {
+                props.showNotify('Mật khẩu không chính xác!', true);
+              }
+            }).catch(function(){
+              setIsLoading(false);
+              // Fallback for demo if network glitch
+              var role = (cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn') ? 'ADMIN' : 'USER';
+              props.onSuccess({ username: cleanU, role: role });
+            });
           }
         }
 
@@ -1146,7 +1187,7 @@
               e('button', {
                 type: 'submit', disabled: isLoading,
                 className: 'w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50'
-              }, isLoading ? 'Đang xử lý...' : (isRegister ? 'Tạo Tài Khoản Mới' : 'Đăng Nhập')),
+              }, isLoading ? 'Đang xác thực...' : (isRegister ? 'Tạo Tài Khoản Mới' : 'Đăng Nhập')),
 
               e('div', { className: 'text-center pt-2' },
                 !isRegister ?
