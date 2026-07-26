@@ -1,33 +1,22 @@
 import { FirebaseService } from '../services/FirebaseService';
-import { DatabaseService } from '../services/DatabaseService';
-import { InitializationService } from '../services/InitializationService';
 import { UserModel, IUserAttributes } from '../models/UserModel';
 
 /**
  * Class UserRepository [REPOSITORY]
- * Kết nối trực tiếp tới CSDL bảng / collection UserRegit.
- * Không hardcode người dùng trong file cấu hình hay mã nguồn.
+ * Kết nối 100% trực tiếp tới CSDL Firebase Cloud Firestore bảng / collection UserRegit.
+ * Không ghi/đọc dữ liệu ra bất kỳ file JSON cục bộ nào.
  */
 export class UserRepository {
   private static COLLECTION = 'UserRegit';
-  private static DB_FILE = 'UserRegit.json';
 
   public static async findAll(): Promise<UserModel[]> {
-    await InitializationService.ensureInitialized();
     let records: IUserAttributes[] = [];
-
     try {
       records = await FirebaseService.getCollectionDocs<IUserAttributes>(this.COLLECTION);
-    } catch {
+    } catch (e) {
+      console.warn('[UserRepository] Fetch error from Firestore:', e);
       records = [];
     }
-
-    if (!records || records.length === 0) {
-      records = DatabaseService.readCollection<IUserAttributes>(this.DB_FILE) || [];
-    } else {
-      DatabaseService.writeCollection(this.DB_FILE, records);
-    }
-
     return records.map(u => new UserModel(u));
   }
 
@@ -57,35 +46,21 @@ export class UserRepository {
 
     try {
       await FirebaseService.saveDoc(this.COLLECTION, docId, record);
+      return true;
     } catch (e) {
-      console.warn('[UserRepository] Firebase save warning:', e);
+      console.error('[UserRepository] Error saving user to Firestore:', e);
+      return false;
     }
-
-    const localUsers = DatabaseService.readCollection<IUserAttributes>(this.DB_FILE) || [];
-    const idx = localUsers.findIndex(u => (u.username || u.name || '').toLowerCase() === docId);
-    if (idx >= 0) {
-      localUsers[idx] = record;
-    } else {
-      localUsers.push(record);
-    }
-    DatabaseService.writeCollection(this.DB_FILE, localUsers);
-
-    return true;
   }
 
   public static async deleteByUsername(username: string): Promise<boolean> {
     const docId = username.trim().toLowerCase();
-
     try {
       await FirebaseService.deleteDocById(this.COLLECTION, docId);
+      return true;
     } catch (e) {
-      console.warn('[UserRepository] Firebase delete warning:', e);
+      console.error('[UserRepository] Error deleting user from Firestore:', e);
+      return false;
     }
-
-    const localUsers = DatabaseService.readCollection<IUserAttributes>(this.DB_FILE) || [];
-    const filtered = localUsers.filter(u => (u.username || u.name || '').toLowerCase() !== docId);
-    DatabaseService.writeCollection(this.DB_FILE, filtered);
-
-    return true;
   }
 }

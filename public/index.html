@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bánh Tiêu & Coffee System - Protected Production</title>
+  <title>Bánh Tiêu & Coffee System - Production Live</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -294,7 +294,7 @@
               ),
               e('div', null,
                 e('h1', { className: 'font-black text-base text-slate-100' }, 'Bánh Tiêu & Coffee System'),
-                e('p', { className: 'text-[10px] font-bold text-amber-400 uppercase tracking-widest' }, 'CSDL UserRegit • Protected Live API')
+                e('p', { className: 'text-[10px] font-bold text-amber-400 uppercase tracking-widest' }, 'CSDL UserRegit • Direct Plaintext Passwords')
               )
             ),
 
@@ -616,7 +616,7 @@
           }
           var cleanU = username.trim();
           var role = (cleanU.toLowerCase() === 'admin') ? 'ADMIN' : 'USER';
-          props.onSuccess({ username: cleanU, role: role });
+          props.onSuccess({ username: cleanU, role: role, password: password });
         }
 
         return e('div', { className: 'min-h-screen bg-slate-950 flex items-center justify-center p-4' },
@@ -626,7 +626,7 @@
                 e('i', { 'data-lucide': 'utensils', className: 'w-8 h-8' })
               ),
               e('h2', { className: 'text-2xl font-black text-slate-100' }, 'Đăng Nhập Hàng Đặt Bánh'),
-              e('p', { className: 'text-xs text-amber-400 font-semibold' }, 'Bảng CSDL UserRegit • Protected Production')
+              e('p', { className: 'text-xs text-amber-400 font-semibold' }, 'Bảng CSDL UserRegit • Raw Password Storage')
             ),
             e('form', { onSubmit: handleLogin, className: 'space-y-4' },
               e('div', null,

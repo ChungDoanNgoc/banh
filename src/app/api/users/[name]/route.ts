@@ -3,6 +3,10 @@ import { UserController } from '@/mvc/controllers/UserController';
 import { SecurityService } from '@/mvc/services/SecurityService';
 import { cookies } from 'next/headers';
 
+export function generateStaticParams() {
+  return [];
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: { name: string } }

@@ -1,4 +1,3 @@
-import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 
 export interface ISessionUserPayload {
@@ -10,33 +9,27 @@ export interface ISessionUserPayload {
 
 /**
  * Class SecurityService [SERVICE & SECURITY]
- * Đảm nhận toàn bộ nghiệp vụ Mã hóa runtime động, Token JWT và Sanitization.
- * LOẠI BỎ 100% CÁC CHUỖI MÃ BĂM HARDCODE TRONG SOURCE CODE.
+ * Quản lý Token JWT và Sanitization.
+ * Mật khẩu lưu trực tiếp dạng nguyên bản (Plain Text) theo yêu cầu người dùng.
  */
 export class SecurityService {
   private static JWT_SECRET_KEY = new TextEncoder().encode(
     process.env.JWT_SECRET || 'BANH_SECURE_DYNAMIC_JWT_KEY_2026_AGY_NEXTJS'
   );
-  private static SALT_ROUNDS = 12;
 
   /**
-   * Mã hóa mật khẩu ĐỘNG BẤT ĐỒNG BỘ ở thời điểm runtime (Bcrypt 12 rounds)
-   * Tuyệt đối không dùng hash cứng hoặc salt tĩnh trong mã nguồn.
+   * Giữ nguyên mật khẩu dạng thô (Plain Text)
    */
   public static async hashPassword(plainTextPassword: string): Promise<string> {
-    if (!plainTextPassword || typeof plainTextPassword !== 'string') {
-      throw new Error('Mật khẩu hợp lệ là bắt buộc để băm mã hóa.');
-    }
-    const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
-    return bcrypt.hash(plainTextPassword, salt);
+    return plainTextPassword;
   }
 
   /**
-   * Xác thực mật khẩu nhập vào với mã băm trong CSDL
+   * So sánh trực tiếp mật khẩu dạng thô
    */
-  public static async verifyPassword(plainTextPassword: string, passwordHash: string): Promise<boolean> {
-    if (!plainTextPassword || !passwordHash) return false;
-    return bcrypt.compare(plainTextPassword, passwordHash);
+  public static async verifyPassword(plainTextPassword: string, storedPassword: string): Promise<boolean> {
+    if (!plainTextPassword || !storedPassword) return false;
+    return plainTextPassword === storedPassword;
   }
 
   /**
@@ -79,31 +72,25 @@ export class SecurityService {
   }
 
   /**
-   * Validate tên tài khoản (3-30 ký tự, chữ/số/-_)
+   * Validate tên tài khoản
    */
   public static validateUsername(username: string): { isValid: boolean; message?: string } {
     const sanitized = this.sanitizeInput(username);
     if (!sanitized) {
       return { isValid: false, message: 'Tên đăng nhập không được để trống!' };
     }
-    if (sanitized.length < 3 || sanitized.length > 30) {
-      return { isValid: false, message: 'Tên đăng nhập phải có từ 3 đến 30 ký tự!' };
-    }
-    if (!/^[a-zA-Z0-9_-]+$/.test(sanitized)) {
-      return { isValid: false, message: 'Tên đăng nhập chỉ bao gồm chữ cái, số, gạch dưới (_) hoặc gạch ngang (-)' };
+    if (sanitized.length < 2 || sanitized.length > 30) {
+      return { isValid: false, message: 'Tên đăng nhập phải có từ 2 đến 30 ký tự!' };
     }
     return { isValid: true };
   }
 
   /**
-   * Validate mật khẩu (tối thiểu 6 ký tự)
+   * Validate mật khẩu
    */
   public static validatePassword(password: string): { isValid: boolean; message?: string } {
     if (!password || typeof password !== 'string') {
       return { isValid: false, message: 'Mật khẩu không được để trống!' };
-    }
-    if (password.length < 6) {
-      return { isValid: false, message: 'Mật khẩu phải chứa ít nhất 6 ký tự!' };
     }
     return { isValid: true };
   }

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { OrderController } from '@/mvc/controllers/OrderController';
 
+export function generateStaticParams() {
+  return [];
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }

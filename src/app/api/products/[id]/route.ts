@@ -3,6 +3,10 @@ import { ProductController } from '@/mvc/controllers/ProductController';
 import { SecurityService } from '@/mvc/services/SecurityService';
 import { cookies } from 'next/headers';
 
+export function generateStaticParams() {
+  return [];
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
