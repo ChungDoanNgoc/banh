@@ -536,14 +536,15 @@
         var pastryProds = products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
         var caffeProds = products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
 
-        return e('div', { className: 'min-h-screen flex flex-col bg-slate-950' },
+        return e('div', { className: 'min-h-screen flex flex-col bg-[url("/banh_tieu_bg.jpg")] bg-cover bg-center bg-fixed relative selection:bg-amber-500 selection:text-slate-950' },
+        e('div', { className: 'fixed inset-0 bg-gradient-to-br from-slate-950/90 via-amber-950/65 to-slate-950/90 backdrop-blur-[2px] pointer-events-none z-0' }),
           notification && e('div', {
             className: 'fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl border shadow-2xl font-bold text-sm flex items-center gap-2 ' +
               (notification.isErr ? 'bg-rose-950/90 text-rose-300 border-rose-800' : 'bg-emerald-950/90 text-emerald-300 border-emerald-800')
           }, notification.msg),
 
           // Header Bar
-          e('header', { className: 'border-b border-slate-800 bg-slate-950/90 sticky top-0 z-40 backdrop-blur-md px-6 py-3.5 flex items-center justify-between' },
+          e('header', { className: 'border-b border-amber-500/20 bg-slate-950/80 sticky top-0 z-40 backdrop-blur-xl px-6 py-3.5 flex items-center justify-between shadow-2xl shadow-amber-500/5 relative z-10' },
             e('div', { className: 'flex items-center gap-3' },
               e('div', { className: 'p-2.5 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-2xl text-slate-950 font-black shadow-lg shadow-amber-500/20' },
                 e('i', { 'data-lucide': 'utensils', className: 'w-5 h-5' })
@@ -638,26 +639,26 @@
           ),
 
           // Main View Content
-          e('main', { className: 'max-w-[1550px] mx-auto px-4 py-8 w-full space-y-8 flex-1' },
+          e('main', { className: 'max-w-[1550px] mx-auto px-4 py-8 w-full space-y-8 flex-1 relative z-10' },
 
             activeTab === 'pastry' && e('div', { className: 'space-y-8' },
               // Summary Metrics
               e('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
-                e('div', { className: 'bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-md' },
+                e('div', { className: 'bg-slate-900/80 border border-amber-500/30 backdrop-blur-md p-5 rounded-2xl flex items-center gap-4 shadow-xl hover:border-amber-500/50 transition-all' },
                   e('div', { className: 'p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20' }, e('i', { 'data-lucide': 'shopping-bag', className: 'w-6 h-6' })),
                   e('div', null,
                     e('span', { className: 'text-xs font-semibold text-slate-400 uppercase' }, 'Tổng Bánh Đã Đặt'),
                     e('div', { className: 'text-2xl font-black text-slate-100' }, totalPastryQty + ' cái')
                   )
                 ),
-                e('div', { className: 'bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-md' },
+                e('div', { className: 'bg-slate-900/80 border border-amber-500/30 backdrop-blur-md p-5 rounded-2xl flex items-center gap-4 shadow-xl hover:border-amber-500/50 transition-all' },
                   e('div', { className: 'p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20' }, e('i', { 'data-lucide': 'dollar-sign', className: 'w-6 h-6' })),
                   e('div', null,
                     e('span', { className: 'text-xs font-semibold text-slate-400 uppercase' }, 'Tổng Tiền Bánh (+1k/User)'),
                     e('div', { className: 'text-2xl font-black text-emerald-400' }, totalPastryRev.toLocaleString('vi-VN') + ' đ')
                   )
                 ),
-                e('div', { className: 'bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-md' },
+                e('div', { className: 'bg-slate-900/80 border border-amber-500/30 backdrop-blur-md p-5 rounded-2xl flex items-center gap-4 shadow-xl hover:border-amber-500/50 transition-all' },
                   e('div', { className: 'p-3 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20' }, e('i', { 'data-lucide': 'clock', className: 'w-6 h-6' })),
                   e('div', null,
                     e('span', { className: 'text-xs font-semibold text-slate-400 uppercase' }, 'Phí Ship'),
@@ -670,7 +671,7 @@
               // Layout Grid
               e('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-8' },
                 // Form Đặt Bánh
-                e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
+                e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/85 border border-amber-500/30 backdrop-blur-md p-6 rounded-3xl h-fit space-y-6 shadow-2xl' },
                   e('h3', { className: 'font-bold text-base text-slate-100 flex items-center justify-between' },
                     e('span', { className: 'flex items-center gap-2' }, e('i', { 'data-lucide': 'utensils', className: 'w-5 h-5 text-amber-400' }), 'Đăng Ký Đặt Bánh'),
                     !isFormOpen && e('span', { className: 'text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30' }, 'ĐÃ ĐÓNG FORM')
@@ -710,7 +711,7 @@
                 ),
 
                 // Table List
-                e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
+                e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/85 border border-amber-500/30 backdrop-blur-md p-6 rounded-3xl space-y-6 shadow-2xl' },
                   e('div', { className: 'flex items-center justify-between' },
                     e('div', null,
                       e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Bánh Hôm Nay'),
@@ -799,7 +800,7 @@
             ),
 
             activeTab === 'coffee' && e('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-8' },
-              e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
+              e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/85 border border-amber-500/30 backdrop-blur-md p-6 rounded-3xl h-fit space-y-6 shadow-2xl' },
                 e('h3', { className: 'font-bold text-base text-slate-100 flex items-center justify-between' },
                   e('span', { className: 'flex items-center gap-2' }, e('i', { 'data-lucide': 'coffee', className: 'w-5 h-5 text-amber-400' }), 'Đăng Ký Đặt Cà Phê'),
                   !isFormOpen && e('span', { className: 'text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30' }, 'ĐÃ ĐÓNG FORM')
@@ -838,7 +839,7 @@
                 )
               ),
 
-              e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
+              e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/85 border border-amber-500/30 backdrop-blur-md p-6 rounded-3xl space-y-6 shadow-2xl' },
                 e('div', { className: 'flex items-center justify-between' },
                   e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Cà Phê Hôm Nay'),
                   e('div', { className: 'flex items-center gap-2' },
@@ -1115,8 +1116,9 @@
           }
         }
 
-        return e('div', { className: 'min-h-screen bg-slate-950 flex items-center justify-center p-4' },
-          e('div', { className: 'max-w-md w-full bg-slate-900/90 border-2 border-amber-500/40 rounded-3xl p-8 space-y-6 shadow-2xl' },
+        return e('div', { className: 'min-h-screen bg-[url("/banh_tieu_bg.jpg")] bg-cover bg-center bg-fixed relative flex items-center justify-center p-4' },
+        e('div', { className: 'fixed inset-0 bg-gradient-to-br from-slate-950/90 via-amber-950/70 to-slate-950/95 backdrop-blur-[2px] pointer-events-none z-0' }),
+          e('div', { className: 'max-w-md w-full bg-slate-900/90 border-2 border-amber-500/50 backdrop-blur-xl rounded-3xl p-8 space-y-6 shadow-2xl relative z-10' },
             e('div', { className: 'text-center space-y-2' },
               e('div', { className: 'w-14 h-14 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto text-slate-950 font-black shadow-lg shadow-amber-500/20' },
                 e('i', { 'data-lucide': 'utensils', className: 'w-8 h-8' })
