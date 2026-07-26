@@ -31,66 +31,16 @@
 <body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-amber-500 selection:text-slate-950">
   <div id="root"></div>
 
-  <!-- Obfuscated Firebase Client Engine -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    // Obfuscated Base64 Client Tokens - Zero Plaintext API Keys in DevTools Sources
-    const _b64 = "eyJhcGlLZXkiOiJBSXphU3lCX3BsYWNlaG9sZGVyX2tleSIsImF1dGhEb21haW4iOiJiYW5odGlldWZwdC5maXJlYmFzZWFwcC5jb20iLCJwcm9qZWN0SWQiOiJiYW5odGlldWZwdCIsInN0b3JhZ2VCdWNrZXQiOiJiYW5odGlldWZwdC5hcHBzcG90LmNvbSIsIm1lc3NhZ2luZ1NlbmRlcklkIjoiMTA0MzAxOTQxNzQzNCIsImFwcElkIjoiMToxMDQzMDE5NDE3NDM0OndlYjo5YWFlOGM5ODRkMDc4NjdjYWQ5NTYzIn0=";
-    const firebaseConfig = JSON.parse(atob(_b64));
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    window.__fs = {
-      getUserDoc: async (username) => {
-        try {
-          const docId = username.trim().toLowerCase();
-          const snap = await getDocs(collection(db, "UserRegit"));
-          const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          return users.find(u => (u.username || u.name || u.id || '').toLowerCase() === docId) || null;
-        } catch { return null; }
-      },
-      getProducts: async () => {
-        try {
-          const snap = await getDocs(collection(db, "products"));
-          return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { return []; }
-      },
-      getOrders: async () => {
-        try {
-          const snap = await getDocs(collection(db, "orders"));
-          return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { return []; }
-      },
-      saveOrder: async (ord) => {
-        try {
-          await setDoc(doc(db, "orders", ord.id), ord);
-          return true;
-        } catch { return false; }
-      },
-      deleteOrder: async (id) => {
-        try {
-          await deleteDoc(doc(db, "orders", id));
-          return true;
-        } catch { return false; }
-      },
-      saveProductPrice: async (id, price) => {
-        try {
-          await setDoc(doc(db, "products", id), { price }, { merge: true });
-          return true;
-        } catch { return false; }
-      }
-    };
-
-    // Dispatch event when Firebase module is ready
-    window.dispatchEvent(new Event('fs_ready'));
-  </script>
-
+  <!-- Pure Client Application - Zero Firebase SDK or API Keys in HTML -->
   <script>
     (function(){
       "use strict";
+
+      // Purge any residual global DevTools handles
+      delete window.db;
+      delete window.app;
+      delete window.firebase;
+      delete window.__fs;
 
       var e = React.createElement;
       var useState = React.useState;
@@ -143,19 +93,30 @@
           setTimeout(function(){ setNotification(null); }, 3500);
         }
 
-        async function loadFirestoreData(){
-          var fs = window.__fs;
-          if(!fs) return;
+        function loadBackendData(){
+          fetch('/api/products').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.products) && data.products.length > 0){
+              setProducts(data.products);
+              var pastries = data.products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
+              if(pastries.length > 0) setSelectedPastry(pastries[0].name);
 
-          var prods = await fs.getProducts();
-          if(prods && prods.length > 0){
-            setProducts(prods);
-            var pastries = prods.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
-            if(pastries.length > 0) setSelectedPastry(pastries[0].name);
-
-            var drinks = prods.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
-            if(drinks.length > 0) setSelectedDrink(drinks[0].name);
-          } else {
+              var drinks = data.products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
+              if(drinks.length > 0) setSelectedDrink(drinks[0].name);
+            } else {
+              var defaultProds = [
+                { id: 'p1', name: 'Bánh Tiêu', price: 6000, category: 'Bánh Tiêu', flag: 1 },
+                { id: 'p2', name: 'Bánh Chuối Chiên', price: 8000, category: 'Bánh Chuối', flag: 1 },
+                { id: 'p3', name: 'Bánh Bao Chiên', price: 10000, category: 'Bánh Bao', flag: 1 },
+                { id: 'c1', name: 'Cà Phê Đen', price: 15000, category: 'Đồ Uống', flag: 2 },
+                { id: 'c2', name: 'Cà Phê Sữa', price: 18000, category: 'Đồ Uống', flag: 2 },
+                { id: 'c3', name: 'Bạc Xỉu', price: 20000, category: 'Đồ Uống', flag: 2 },
+                { id: 'c4', name: 'Trà Đào Cam Sả', price: 25000, category: 'Đồ Uống', flag: 2 }
+              ];
+              setProducts(defaultProds);
+              setSelectedPastry('Bánh Tiêu');
+              setSelectedDrink('Cà Phê Đen');
+            }
+          }).catch(function(){
             var defaultProds = [
               { id: 'p1', name: 'Bánh Tiêu', price: 6000, category: 'Bánh Tiêu', flag: 1 },
               { id: 'p2', name: 'Bánh Chuối Chiên', price: 8000, category: 'Bánh Chuối', flag: 1 },
@@ -168,20 +129,15 @@
             setProducts(defaultProds);
             setSelectedPastry('Bánh Tiêu');
             setSelectedDrink('Cà Phê Đen');
-          }
+          });
 
-          var ords = await fs.getOrders();
-          if(ords) setOrders(ords);
+          fetch('/api/orders').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.orders)) setOrders(data.orders);
+          }).catch(function(){});
         }
 
         useEffect(function(){
-          if(user) {
-            if(window.__fs){
-              loadFirestoreData();
-            } else {
-              window.addEventListener('fs_ready', loadFirestoreData, { once: true });
-            }
-          }
+          if(user) loadBackendData();
         }, [user]);
 
         useEffect(function(){
@@ -193,14 +149,14 @@
             onSuccess: function(u){
               setUser(u);
               localStorage.setItem('bt_sess', JSON.stringify(u));
-              showNotify('Đăng nhập thành công với quyền ' + u.role + '!');
+              showNotify('Đăng nhập thành công!');
             },
             showNotify: showNotify
           });
         }
 
         // Add Pastry Order
-        async function handleAddPastry(evt){
+        function handleAddPastry(evt){
           evt.preventDefault();
           if(!selectedPastry){
             showNotify('Vui lòng chọn loại bánh!', true);
@@ -219,14 +175,19 @@
             createdAt: new Date().toISOString()
           };
 
-          if(window.__fs) await window.__fs.saveOrder(nOrd);
+          fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nOrd)
+          }).then(function(){ loadBackendData(); }).catch(function(){});
+
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt bánh cho ' + user.username + '!');
           setPastryQty(1);
         }
 
         // Add Beverage Order
-        async function handleAddCoffee(evt){
+        function handleAddCoffee(evt){
           evt.preventDefault();
           if(!selectedDrink){
             showNotify('Vui lòng chọn loại đồ uống!', true);
@@ -245,21 +206,21 @@
             createdAt: new Date().toISOString()
           };
 
-          if(window.__fs) await window.__fs.saveOrder(nOrd);
+          fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nOrd)
+          }).then(function(){ loadBackendData(); }).catch(function(){});
+
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt cà phê cho ' + user.username + '!');
           setDrinkQty(1);
         }
 
         // Delete User Order Group
-        async function handleDeleteUserOrders(cName){
+        function handleDeleteUserOrders(cName){
           if(!confirm('Bạn có chắc muốn xóa tất cả đơn của ' + cName + '?')) return;
-          var toDelete = orders.filter(function(o){ return (o.customerName || '').trim() === cName; });
-          if(window.__fs){
-            for(var i=0; i<toDelete.length; i++){
-              await window.__fs.deleteOrder(toDelete[i].id);
-            }
-          }
+          fetch('/api/orders?customerName=' + encodeURIComponent(cName), { method: 'DELETE' }).catch(function(){});
           setOrders(function(prev){
             return prev.filter(function(o){ return (o.customerName || '').trim() !== cName; });
           });
@@ -275,16 +236,18 @@
         }
 
         // Save Update Modal
-        async function handleSaveUpdateModal(){
+        function handleSaveUpdateModal(){
           if(!updateGroup) return;
-          for(var i=0; i<updateGroup.items.length; i++){
-            var item = updateGroup.items[i];
+          updateGroup.items.forEach(function(item){
             if(editQtyMap[item.id] !== undefined){
               var nQ = editQtyMap[item.id];
-              var updated = Object.assign({}, item, { quantity: nQ, totalPrice: nQ * item.unitPrice });
-              if(window.__fs) await window.__fs.saveOrder(updated);
+              fetch('/api/orders/' + item.id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity: nQ, totalPrice: nQ * item.unitPrice })
+              }).catch(function(){});
             }
-          }
+          });
           setOrders(function(prev){
             return prev.map(function(item){
               if(editQtyMap[item.id] !== undefined){
@@ -299,9 +262,9 @@
         }
 
         // Delete Single Item inside Modal
-        async function handleDeleteSingleItem(itemId, pName){
+        function handleDeleteSingleItem(itemId, pName){
           if(!confirm('Xóa món "' + pName + '" khỏi đơn hàng?')) return;
-          if(window.__fs) await window.__fs.deleteOrder(itemId);
+          fetch('/api/orders/' + itemId, { method: 'DELETE' }).catch(function(){});
           setOrders(function(prev){ return prev.filter(function(o){ return o.id !== itemId; }); });
           showNotify('Đã xóa món ' + pName);
           setUpdateGroup(null);
@@ -635,8 +598,12 @@
                       }),
                       e('span', { className: 'text-xs text-slate-400 font-bold' }, 'đ'),
                       e('button', {
-                        onClick: async function(){
-                          if(window.__fs) await window.__fs.saveProductPrice(p.id, p.price);
+                        onClick: function(){
+                          fetch('/api/products/' + p.id, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ price: p.price })
+                          }).catch(function(){});
                           showNotify('Đã cập nhật giá mới cho ' + p.name + '!');
                         },
                         className: 'px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs cursor-pointer'
@@ -710,27 +677,16 @@
         var username = uState[0]; var setUsername = uState[1];
         var password = pState[0]; var setPassword = pState[1];
 
-        async function handleLogin(evt){
+        function handleLogin(evt){
           evt.preventDefault();
           if(!username.trim() || !password){
             props.showNotify('Vui lòng nhập tên tài khoản và mật khẩu!', true);
             return;
           }
           var cleanU = username.trim();
-          var userDoc = null;
-          if(window.__fs && window.__fs.getUserDoc){
-            userDoc = await window.__fs.getUserDoc(cleanU);
-          }
-
-          var role = 'USER';
-          if(userDoc && userDoc.role){
-            role = userDoc.role.toUpperCase();
-          } else if(cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn'){
-            role = 'ADMIN';
-          }
-
+          var role = (cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn') ? 'ADMIN' : 'USER';
           props.onSuccess({
-            username: userDoc ? (userDoc.username || userDoc.name || cleanU) : cleanU,
+            username: cleanU,
             role: role,
             password: password
           });
