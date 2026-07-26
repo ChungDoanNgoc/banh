@@ -114,7 +114,7 @@
 
         function showNotify(msg, isErr){
           setNotification({ msg: msg, isErr: !!isErr });
-          setTimeout(function(){ setNotification(null); }, 3500);
+          setTimeout(function(){ setNotification(null); }, 4000);
         }
 
         function loadFirestoreData(){
@@ -144,6 +144,43 @@
             }
           }).catch(function(){});
         }
+
+        // Auto Job: Daily 9:00 AM Reset Cleaner
+        useEffect(function(){
+          function checkDaily9AMReset(){
+            var now = new Date();
+            var todayKey = now.getFullYear() + '-' + (now.getMonth()+1) + '-' + now.getDate();
+            var today9AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+            var lastReset = localStorage.getItem('last_auto_clean_date');
+
+            if(now >= today9AM && lastReset !== todayKey){
+              fetch(FS_BASE + '/orders').then(function(r){ return r.json(); }).then(function(data){
+                if(data && Array.isArray(data.documents)){
+                  var allOrds = data.documents.map(parseDoc);
+                  var staleOrds = allOrds.filter(function(o){
+                    if(!o.createdAt) return true;
+                    var createdDate = new Date(o.createdAt);
+                    return createdDate < today9AM;
+                  });
+
+                  if(staleOrds.length > 0){
+                    staleOrds.forEach(function(o){
+                      fetch(FS_BASE + '/orders/' + o.id, { method: 'DELETE' }).catch(function(){});
+                    });
+                    showNotify('⏰ [Auto Job 9h00 SA]: Đã tự động dọn dẹp ' + staleOrds.length + ' đơn hàng ngày cũ!');
+                    loadFirestoreData();
+                  }
+                }
+              }).catch(function(){});
+
+              localStorage.setItem('last_auto_clean_date', todayKey);
+            }
+          }
+
+          checkDaily9AMReset();
+          var timerId = setInterval(checkDaily9AMReset, 30000); // Check every 30 seconds
+          return function(){ clearInterval(timerId); };
+        }, []);
 
         useEffect(function(){
           if(user) loadFirestoreData();
@@ -541,8 +578,13 @@
               }, e('i', { 'data-lucide': 'users', className: 'w-4 h-4' }), 'Quản Lý User')
             ),
 
-            // Header Action Buttons
+            // Header Action Buttons & Auto Job Status
             e('div', { className: 'flex items-center gap-2.5' },
+              e('div', { className: 'hidden xl:flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs font-bold' },
+                e('i', { 'data-lucide': 'clock', className: 'w-3.5 h-3.5' }),
+                'Auto Reset: 9h00 sáng'
+              ),
+
               e('button', {
                 onClick: handleSendAllZalo,
                 className: 'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg bg-blue-600 hover:bg-blue-500 text-white cursor-pointer',
