@@ -46,7 +46,6 @@
 
       var FS_BASE = "https://firestore.googleapis.com/v1/projects/banhtieufpt/databases/(default)/documents";
 
-      // Parse Firestore REST API Document Format
       function parseDoc(docItem){
         var fields = docItem.fields || {};
         var res = { id: docItem.name ? docItem.name.split('/').pop() : '' };
@@ -84,7 +83,6 @@
         var userList = userListState[0];
         var setUserList = userListState[1];
 
-        // Status Đóng/Mở Form của Admin (Mặc định Mở = true)
         var formOpenState = useState(function(){
           var stored = localStorage.getItem('bt_form_open');
           return stored !== null ? stored === 'true' : true;
@@ -119,9 +117,7 @@
           setTimeout(function(){ setNotification(null); }, 3500);
         }
 
-        // Tải 100% ĐỘNG trực tiếp từ Firestore REST API
         function loadFirestoreData(){
-          // 1. Fetch Products
           fetch(FS_BASE + '/products').then(function(r){ return r.json(); }).then(function(data){
             if(data && Array.isArray(data.documents)){
               var parsed = data.documents.map(parseDoc);
@@ -134,7 +130,6 @@
             }
           }).catch(function(){});
 
-          // 2. Fetch Orders
           fetch(FS_BASE + '/orders').then(function(r){ return r.json(); }).then(function(data){
             if(data && Array.isArray(data.documents)){
               var parsedOrds = data.documents.map(parseDoc);
@@ -142,7 +137,6 @@
             }
           }).catch(function(){});
 
-          // 3. Fetch Users
           fetch(FS_BASE + '/UserRegit').then(function(r){ return r.json(); }).then(function(data){
             if(data && Array.isArray(data.documents)){
               var parsedUsers = data.documents.map(parseDoc);
@@ -170,7 +164,6 @@
           });
         }
 
-        // Toggle Form Open/Close by Admin
         function handleToggleFormStatus(){
           var nState = !isFormOpen;
           setIsFormOpen(nState);
@@ -178,7 +171,6 @@
           showNotify(nState ? 'Đã MỞ Form đăng ký đặt hàng!' : 'Đã ĐÓNG Form đăng ký đặt hàng!', !nState);
         }
 
-        // Admin Xóa User khỏi Firestore REST API
         function handleDeleteUser(uName){
           if(uName === user.username){
             showNotify('Không thể tự xóa tài khoản đang đăng nhập!', true);
@@ -191,7 +183,7 @@
           showNotify('Đã xóa thành công tài khoản ' + uName);
         }
 
-        // Add Pastry Order qua Firestore REST API
+        // Add Pastry Order
         function handleAddPastry(evt){
           evt.preventDefault();
           if(!isFormOpen){
@@ -216,7 +208,6 @@
             createdAt: new Date().toISOString()
           };
 
-          // Firestore REST API Create Document
           var payload = {
             fields: {
               id: { stringValue: ordId },
@@ -241,7 +232,7 @@
           setPastryQty(1);
         }
 
-        // Add Beverage Order qua Firestore REST API
+        // Add Beverage Order
         function handleAddCoffee(evt){
           evt.preventDefault();
           if(!isFormOpen){
@@ -311,7 +302,7 @@
           setUpdateGroup(group);
         }
 
-        // Save Update Modal qua Firestore REST API
+        // Save Update Modal
         function handleSaveUpdateModal(){
           if(!updateGroup) return;
           updateGroup.items.forEach(function(item){
@@ -417,6 +408,40 @@
           };
         });
 
+        // Export Báo Cáo CSV Cho Admin
+        function handleExportCSV(){
+          var csvRows = [];
+          csvRows.push(['STT', 'Tên Người Đặt', 'Danh Sách Món Đặt', 'Tổng Số Lượng', 'Thành Tiền (VNĐ)', 'Tổng Thanh Toán (+1k Ship) (VNĐ)']);
+
+          var allGrouped = groupedPastryList.concat(groupedCaffeList);
+          if(allGrouped.length === 0){
+            showNotify('Chưa có đơn hàng nào để xuất CSV!', true);
+            return;
+          }
+
+          allGrouped.forEach(function(g, idx){
+            csvRows.push([
+              idx + 1,
+              '"' + g.customerName.replace(/"/g, '""') + '"',
+              '"' + g.lines.join('; ').replace(/"/g, '""') + '"',
+              g.totalQty,
+              g.totalPrice,
+              g.finalTotalPrice
+            ]);
+          });
+
+          var csvContent = '\uFEFF' + csvRows.map(function(r){ return r.join(','); }).join('\n');
+          var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', 'Bao_Cao_Don_Hang_' + new Date().toISOString().slice(0,10) + '.csv');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showNotify('Đã xuất file báo cáo CSV thành công!');
+        }
+
         var totalPastryQty = groupedPastryList.reduce(function(acc, g){ return acc + g.totalQty; }, 0);
         var totalPastryRev = groupedPastryList.reduce(function(acc, g){ return acc + g.finalTotalPrice; }, 0);
         var pastryShippingFee = groupedPastryList.length * 1000;
@@ -470,8 +495,19 @@
               }, e('i', { 'data-lucide': 'users', className: 'w-4 h-4' }), 'Quản Lý User')
             ),
 
-            // User Info, Form Toggle, Logout
+            // User Info, Admin Export CSV, Form Toggle, Logout
             e('div', { className: 'flex items-center gap-3' },
+              // Admin Nút Download CSV
+              isAdminUser && e('button', {
+                onClick: handleExportCSV,
+                className: 'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer',
+                title: 'Tải báo cáo đơn hàng CSV cho Excel'
+              },
+                e('i', { 'data-lucide': 'download', className: 'w-4 h-4' }),
+                'Xuất CSV'
+              ),
+
+              // Admin Nút Đóng / Mở Form
               isAdminUser && e('button', {
                 onClick: handleToggleFormStatus,
                 className: 'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg border cursor-pointer ' +
@@ -569,9 +605,15 @@
 
                 // Table
                 e('div', { className: 'lg:col-span-2 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
-                  e('div', null,
-                    e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Bánh Hôm Nay'),
-                    e('p', { className: 'text-xs text-slate-400' }, 'Gộp theo người dùng (' + groupedPastryList.length + ' người đặt)')
+                  e('div', { className: 'flex items-center justify-between' },
+                    e('div', null,
+                      e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Bánh Hôm Nay'),
+                      e('p', { className: 'text-xs text-slate-400' }, 'Gộp theo người dùng (' + groupedPastryList.length + ' người đặt)')
+                    ),
+                    isAdminUser && e('button', {
+                      onClick: handleExportCSV,
+                      className: 'px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                    }, e('i', { 'data-lucide': 'download', className: 'w-3.5 h-3.5' }), 'Xuất CSV')
                   ),
                   e('div', { className: 'overflow-hidden rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
                     e('table', { className: 'w-full text-left text-xs text-slate-300 border-collapse' },
