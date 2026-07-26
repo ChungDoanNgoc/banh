@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bánh Tiêu & Coffee System - Firebase Firestore Live</title>
+  <title>Bánh Tiêu & Coffee System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -48,7 +48,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Private scoped instance helper
     window.__fs_api = {
       getProducts: async () => {
         try {
@@ -138,11 +137,9 @@
           setTimeout(function(){ setNotification(null); }, 3500);
         }
 
-        // Tải dữ liệu ĐỘNG TRỰC TIẾP từ Cloud Firestore
         async function loadFirestoreData(){
           if(!window.__fs_api) return;
 
-          // 1. Fetch Products
           var prods = await window.__fs_api.getProducts();
           if(prods && prods.length > 0){
             setProducts(prods);
@@ -152,7 +149,6 @@
             var drinks = prods.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
             if(drinks.length > 0) setSelectedDrink(drinks[0].name);
           } else {
-            // Fallback Seed
             var defaultProds = [
               { id: 'p1', name: 'Bánh Tiêu', price: 6000, category: 'Bánh Tiêu', flag: 1 },
               { id: 'p2', name: 'Bánh Chuối Chiên', price: 8000, category: 'Bánh Chuối', flag: 1 },
@@ -167,7 +163,6 @@
             setSelectedDrink('Cà Phê Đen');
           }
 
-          // 2. Fetch Orders
           var ords = await window.__fs_api.getOrders();
           if(ords) setOrders(ords);
         }
@@ -385,8 +380,7 @@
                 e('i', { 'data-lucide': 'utensils', className: 'w-5 h-5' })
               ),
               e('div', null,
-                e('h1', { className: 'font-black text-base text-slate-100' }, 'Bánh Tiêu & Coffee System'),
-                e('p', { className: 'text-[10px] font-bold text-amber-400 uppercase tracking-widest' }, 'CSDL UserRegit • Live Firestore Cloud')
+                e('h1', { className: 'font-black text-base text-slate-100' }, 'Bánh Tiêu & Coffee System')
               )
             ),
 
@@ -720,8 +714,7 @@
               e('div', { className: 'w-14 h-14 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto text-slate-950 font-black shadow-lg shadow-amber-500/20' },
                 e('i', { 'data-lucide': 'utensils', className: 'w-8 h-8' })
               ),
-              e('h2', { className: 'text-2xl font-black text-slate-100' }, 'Đăng Nhập Hàng Đặt Bánh'),
-              e('p', { className: 'text-xs text-amber-400 font-semibold' }, 'Bảng CSDL UserRegit • Live Firestore Cloud')
+              e('h2', { className: 'text-2xl font-black text-slate-100' }, 'Đăng Nhập Hàng Đặt Bánh')
             ),
             e('form', { onSubmit: handleLogin, className: 'space-y-4' },
               e('div', null,
@@ -729,7 +722,7 @@
                 e('input', {
                   type: 'text', value: username,
                   onChange: function(evt){ setUsername(evt.target.value); },
-                  placeholder: 'Nhập tên tài khoản (VD: admin, Chung, ThaoTP39)...',
+                  placeholder: 'Nhập tên tài khoản...',
                   className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none font-semibold'
                 })
               ),
