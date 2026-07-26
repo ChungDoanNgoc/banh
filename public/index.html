@@ -461,9 +461,15 @@
           showNotify('Đã xuất file báo cáo CSV thành công!');
         }
 
+        // Summary Calculations
         var totalPastryQty = groupedPastryList.reduce(function(acc, g){ return acc + g.totalQty; }, 0);
+        var totalPastryTotalPrice = groupedPastryList.reduce(function(acc, g){ return acc + g.totalPrice; }, 0);
         var totalPastryRev = groupedPastryList.reduce(function(acc, g){ return acc + g.finalTotalPrice; }, 0);
         var pastryShippingFee = groupedPastryList.length * 1000;
+
+        var totalCaffeQty = groupedCaffeList.reduce(function(acc, g){ return acc + g.totalQty; }, 0);
+        var totalCaffeTotalPrice = groupedCaffeList.reduce(function(acc, g){ return acc + g.totalPrice; }, 0);
+        var totalCaffeRev = groupedCaffeList.reduce(function(acc, g){ return acc + g.finalTotalPrice; }, 0);
 
         var pastryProds = products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
         var caffeProds = products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
@@ -514,7 +520,7 @@
               }, e('i', { 'data-lucide': 'users', className: 'w-4 h-4' }), 'Quản Lý User')
             ),
 
-            // Header Action Buttons: Gửi Zalo, Xuất CSV, Form Status, User Profile
+            // Header Action Buttons
             e('div', { className: 'flex items-center gap-2.5' },
               e('button', {
                 onClick: handleSendAllZalo,
@@ -587,7 +593,7 @@
                 )
               ),
 
-              // Responsive Layout Grid
+              // Layout Grid
               e('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-8' },
                 // Form Đặt Bánh
                 e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
@@ -629,7 +635,7 @@
                   )
                 ),
 
-                // Table List
+                // Table List with Summary Footer Row (TỔNG CỘNG)
                 e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
                   e('div', { className: 'flex items-center justify-between' },
                     e('div', null,
@@ -688,6 +694,20 @@
                             )
                           );
                         })
+                      ),
+
+                      // Footer Row: TỔNG CỘNG THÀNH TIỀN VÀ TỔNG THANH TOÁN
+                      groupedPastryList.length > 0 && e('tfoot', { className: 'bg-slate-950 text-slate-100 font-black border-t-2 border-amber-500/60' },
+                        e('tr', null,
+                          e('td', { className: 'p-4 font-black text-amber-400 text-sm border-r border-slate-800/80 whitespace-nowrap' }, 'TỔNG CỘNG:'),
+                          e('td', { className: 'p-4 text-center border-r border-slate-800/80 whitespace-nowrap' },
+                            e('span', { className: 'inline-block px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 font-black rounded-xl text-xs whitespace-nowrap' }, totalPastryQty + ' cái')
+                          ),
+                          e('td', { className: 'p-4 border-r border-slate-800/80 font-bold text-slate-400 text-xs' }, groupedPastryList.length + ' người đặt bánh'),
+                          e('td', { className: 'p-4 text-right font-black text-emerald-400 text-sm font-mono border-r border-slate-800/80 whitespace-nowrap' }, totalPastryTotalPrice.toLocaleString('vi-VN') + 'đ'),
+                          e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/80 whitespace-nowrap' }, totalPastryRev.toLocaleString('vi-VN') + 'đ'),
+                          e('td', { className: 'p-4 text-center text-slate-600 font-bold' }, '-')
+                        )
                       )
                     )
                   )
@@ -765,6 +785,17 @@
                           e('td', { className: 'p-4 text-right font-black text-amber-400 font-mono text-sm whitespace-nowrap' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ')
                         );
                       })
+                    ),
+
+                    groupedCaffeList.length > 0 && e('tfoot', { className: 'bg-slate-950 text-slate-100 font-black border-t-2 border-amber-500/60' },
+                      e('tr', null,
+                        e('td', { className: 'p-4 font-black text-amber-400 text-sm border-r border-slate-800 whitespace-nowrap' }, 'TỔNG CỘNG:'),
+                        e('td', { className: 'p-4 text-center border-r border-slate-800 whitespace-nowrap' },
+                          e('span', { className: 'inline-block px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 font-black rounded-xl text-xs whitespace-nowrap' }, totalCaffeQty + ' ly')
+                        ),
+                        e('td', { className: 'p-4 border-r border-slate-800 font-bold text-slate-400 text-xs' }, groupedCaffeList.length + ' người đặt đồ uống'),
+                        e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono whitespace-nowrap' }, totalCaffeRev.toLocaleString('vi-VN') + 'đ')
+                      )
                     )
                   )
                 )
@@ -950,7 +981,6 @@
               }
             };
 
-            // Save to Firestore REST API UserRegit collection
             fetch(FS_BASE + '/UserRegit?documentId=' + docId, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -980,7 +1010,6 @@
               e('p', { className: 'text-xs text-slate-400 font-medium' }, isRegister ? 'Tạo tài khoản mới để bắt đầu đặt bánh & cà phê' : 'Nhập thông tin để vào hệ thống đặt hàng')
             ),
 
-            // Tab switch (Đăng Nhập / Đăng Ký)
             e('div', { className: 'flex p-1 bg-slate-950 rounded-2xl border border-slate-800' },
               e('button', {
                 type: 'button',
