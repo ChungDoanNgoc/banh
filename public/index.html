@@ -117,6 +117,17 @@
           setTimeout(function(){ setNotification(null); }, 3500);
         }
 
+        // Send formatted message to Zalo
+        function handleSendZalo(name, pastryType, qty){
+          var msg = "Tên: " + name + "\nLoại Bánh: " + pastryType + "\nSố Lượng: " + qty + (typeof qty === 'number' ? ' cái' : '');
+          
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(msg);
+          }
+          showNotify("Đã sao chép thông tin Zalo! Đang mở Zalo...");
+          window.open("https://chat.zalo.me", "_blank");
+        }
+
         function loadFirestoreData(){
           fetch(FS_BASE + '/products').then(function(r){ return r.json(); }).then(function(data){
             if(data && Array.isArray(data.documents)){
@@ -408,7 +419,7 @@
           };
         });
 
-        // Export Báo Cáo CSV Cho Admin
+        // Export CSV
         function handleExportCSV(){
           var csvRows = [];
           csvRows.push(['STT', 'Tên Người Đặt', 'Danh Sách Món Đặt', 'Tổng Số Lượng', 'Thành Tiền (VNĐ)', 'Tổng Thanh Toán (+1k Ship) (VNĐ)']);
@@ -497,7 +508,6 @@
 
             // User Info, Admin Export CSV, Form Toggle, Logout
             e('div', { className: 'flex items-center gap-3' },
-              // Admin Nút Download CSV
               isAdminUser && e('button', {
                 onClick: handleExportCSV,
                 className: 'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer',
@@ -507,7 +517,6 @@
                 'Xuất CSV'
               ),
 
-              // Admin Nút Đóng / Mở Form
               isAdminUser && e('button', {
                 onClick: handleToggleFormStatus,
                 className: 'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg border cursor-pointer ' +
@@ -596,10 +605,21 @@
                         className: 'w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 font-bold'
                       })
                     ),
-                    e('button', {
-                      type: 'submit',
-                      className: 'w-full mt-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-3 rounded-xl shadow-lg shadow-amber-500/20 cursor-pointer'
-                    }, 'Xác Nhận Đặt Bánh')
+                    e('div', { className: 'grid grid-cols-2 gap-2 mt-4' },
+                      e('button', {
+                        type: 'submit',
+                        className: 'w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-3 rounded-xl shadow-lg shadow-amber-500/20 cursor-pointer text-xs'
+                      }, 'Xác Nhận Đặt Bánh'),
+
+                      e('button', {
+                        type: 'button',
+                        onClick: function(){ handleSendZalo(user.username, selectedPastry, pastryQty); },
+                        className: 'w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl shadow-lg shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-1.5 text-xs'
+                      },
+                        e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }),
+                        '💬 Gửi Zalo'
+                      )
+                    )
                   )
                 ),
 
@@ -641,14 +661,21 @@
                             e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60' }, g.totalPrice.toLocaleString('vi-VN') + 'đ'),
                             e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ'),
                             e('td', { className: 'p-4 text-center' },
-                              e('div', { className: 'flex items-center justify-center gap-2' },
+                              e('div', { className: 'flex items-center justify-center gap-1.5' },
+                                e('button', {
+                                  onClick: function(){ handleSendZalo(g.customerName, g.lines.join(', '), g.totalQty + ' cái'); },
+                                  className: 'px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs cursor-pointer flex items-center gap-1',
+                                  title: 'Gửi tin nhắn Zalo'
+                                }, e('i', { 'data-lucide': 'message-circle', className: 'w-3.5 h-3.5' }), 'Zalo'),
+
                                 e('button', {
                                   onClick: function(){ handleOpenUpdateModal(g); },
-                                  className: 'px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 text-amber-400 font-extrabold rounded-xl text-xs cursor-pointer'
+                                  className: 'px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 text-amber-400 font-extrabold rounded-xl text-xs cursor-pointer'
                                 }, 'Update'),
+
                                 e('button', {
                                   onClick: function(){ handleDeleteUserOrders(g.customerName); },
-                                  className: 'p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/50 text-rose-400 rounded-xl cursor-pointer'
+                                  className: 'p-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/50 text-rose-400 rounded-xl cursor-pointer'
                                 }, e('i', { 'data-lucide': 'x', className: 'w-4 h-4' }))
                               )
                             )
@@ -694,10 +721,21 @@
                       className: 'w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 font-bold'
                     })
                   ),
-                  e('button', {
-                    type: 'submit',
-                    className: 'w-full mt-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-3 rounded-xl shadow-lg cursor-pointer'
-                  }, 'Xác Nhận Đặt Cà Phê')
+                  e('div', { className: 'grid grid-cols-2 gap-2 mt-4' },
+                    e('button', {
+                      type: 'submit',
+                      className: 'w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-3 rounded-xl shadow-lg cursor-pointer text-xs'
+                    }, 'Xác Nhận Đặt Cà Phê'),
+
+                    e('button', {
+                      type: 'button',
+                      onClick: function(){ handleSendZalo(user.username, selectedDrink, drinkQty + ' ly'); },
+                      className: 'w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl shadow-lg shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-1.5 text-xs'
+                    },
+                      e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }),
+                      '💬 Gửi Zalo'
+                    )
+                  )
                 )
               ),
 
