@@ -185,6 +185,19 @@
           showNotify('Đã xóa thành công tài khoản ' + uName);
         }
 
+        // Admin Delete ALL Orders
+        function handleDeleteAllOrders(){
+          if(!isAdminUser) return;
+          if(!confirm('⚠️ CẢNH BÁO ADMIN: Bạn có chắc chắn muốn XÓA VĨNH VIỄN toàn bộ đơn đặt hàng trong hệ thống không?')) return;
+          
+          orders.forEach(function(o){
+            fetch(FS_BASE + '/orders/' + o.id, { method: 'DELETE' }).catch(function(){});
+          });
+          
+          setOrders([]);
+          showNotify('Đã xóa vĩnh viễn toàn bộ dữ liệu đơn hàng thành công!');
+        }
+
         // Add Pastry Order
         function handleAddPastry(evt){
           evt.preventDefault();
@@ -549,6 +562,15 @@
               ),
 
               isAdminUser && e('button', {
+                onClick: handleDeleteAllOrders,
+                className: 'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg bg-rose-600 hover:bg-rose-500 text-white cursor-pointer border border-rose-500/40',
+                title: 'Xóa toàn bộ dữ liệu đơn hàng (Chỉ dành cho Admin)'
+              },
+                e('i', { 'data-lucide': 'trash-2', className: 'w-4 h-4' }),
+                'Xóa Tất Cả Đơn'
+              ),
+
+              isAdminUser && e('button', {
                 onClick: handleToggleFormStatus,
                 className: 'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg border cursor-pointer ' +
                   (isFormOpen ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'),
@@ -659,7 +681,12 @@
                       isAdminUser && e('button', {
                         onClick: handleExportCSV,
                         className: 'px-3.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
-                      }, e('i', { 'data-lucide': 'download', className: 'w-4 h-4' }), 'Xuất CSV')
+                      }, e('i', { 'data-lucide': 'download', className: 'w-4 h-4' }), 'Xuất CSV'),
+
+                      isAdminUser && e('button', {
+                        onClick: handleDeleteAllOrders,
+                        className: 'px-3.5 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                      }, e('i', { 'data-lucide': 'trash-2', className: 'w-4 h-4' }), 'Xóa Tất Cả Đơn')
                     )
                   ),
                   e('div', { className: 'overflow-x-auto rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
@@ -770,10 +797,17 @@
               e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
                 e('div', { className: 'flex items-center justify-between' },
                   e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Cà Phê Hôm Nay'),
-                  e('button', {
-                    onClick: handleSendAllZalo,
-                    className: 'px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
-                  }, e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }), 'Gửi Zalo')
+                  e('div', { className: 'flex items-center gap-2' },
+                    e('button', {
+                      onClick: handleSendAllZalo,
+                      className: 'px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                    }, e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }), 'Gửi Zalo'),
+
+                    isAdminUser && e('button', {
+                      onClick: handleDeleteAllOrders,
+                      className: 'px-3.5 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                    }, e('i', { 'data-lucide': 'trash-2', className: 'w-4 h-4' }), 'Xóa Tất Cả Đơn')
+                  )
                 ),
                 e('div', { className: 'overflow-x-auto rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
                   e('table', { className: 'w-full text-left text-xs text-slate-300 border-collapse' },
