@@ -526,7 +526,6 @@
 
             // Header Action Buttons: Gửi Zalo, Xuất CSV, Form Status, User Profile
             e('div', { className: 'flex items-center gap-2.5' },
-              // Nút Gửi Zalo ở phía trên gần Xuất CSV
               e('button', {
                 onClick: handleSendAllZalo,
                 className: 'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg bg-blue-600 hover:bg-blue-500 text-white cursor-pointer',
@@ -568,8 +567,8 @@
             )
           ),
 
-          // Main View Content
-          e('main', { className: 'max-w-7xl mx-auto px-4 py-8 w-full space-y-8 flex-1' },
+          // Main View Content - Expanded Width for Max Clarity
+          e('main', { className: 'max-w-[1550px] mx-auto px-4 py-8 w-full space-y-8 flex-1' },
 
             activeTab === 'pastry' && e('div', { className: 'space-y-8' },
               // Summary Metrics
@@ -598,10 +597,10 @@
                 )
               ),
 
-              // Layout Grid
-              e('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-8' },
+              // Responsive Layout Grid (Form: 3.5 cols, Table: 8.5 cols)
+              e('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-8' },
                 // Form Đặt Bánh
-                e('div', { className: 'bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
+                e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
                   e('h3', { className: 'font-bold text-base text-slate-100 flex items-center justify-between' },
                     e('span', { className: 'flex items-center gap-2' }, e('i', { 'data-lucide': 'utensils', className: 'w-5 h-5 text-amber-400' }), 'Đăng Ký Đặt Bánh'),
                     !isFormOpen && e('span', { className: 'text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30' }, 'ĐÃ ĐÓNG FORM')
@@ -640,8 +639,8 @@
                   )
                 ),
 
-                // Table
-                e('div', { className: 'lg:col-span-2 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
+                // Table List (Spacious & Clean Layout)
+                e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
                   e('div', { className: 'flex items-center justify-between' },
                     e('div', null,
                       e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Bánh Hôm Nay'),
@@ -650,41 +649,41 @@
                     e('div', { className: 'flex items-center gap-2' },
                       e('button', {
                         onClick: handleSendAllZalo,
-                        className: 'px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
-                      }, e('i', { 'data-lucide': 'message-circle', className: 'w-3.5 h-3.5' }), 'Gửi Zalo'),
+                        className: 'px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                      }, e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }), 'Gửi Zalo'),
 
                       isAdminUser && e('button', {
                         onClick: handleExportCSV,
-                        className: 'px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
-                      }, e('i', { 'data-lucide': 'download', className: 'w-3.5 h-3.5' }), 'Xuất CSV')
+                        className: 'px-3.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                      }, e('i', { 'data-lucide': 'download', className: 'w-4 h-4' }), 'Xuất CSV')
                     )
                   ),
-                  e('div', { className: 'overflow-hidden rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
+                  e('div', { className: 'overflow-x-auto rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
                     e('table', { className: 'w-full text-left text-xs text-slate-300 border-collapse' },
                       e('thead', { className: 'bg-slate-950 text-slate-400 font-black text-[11px] uppercase border-b-2 border-amber-500/40' },
                         e('tr', null,
-                          e('th', { className: 'p-4 border-r border-slate-800/80' }, 'TÊN NGƯỜI ĐẶT'),
-                          e('th', { className: 'p-4 text-center border-r border-slate-800/80' }, 'SỐ LƯỢNG'),
-                          e('th', { className: 'p-4 border-r border-slate-800/80' }, 'TÊN SẢN PHẨM'),
-                          e('th', { className: 'p-4 text-right border-r border-slate-800/80' }, 'THÀNH TIỀN'),
-                          e('th', { className: 'p-4 text-right border-r border-slate-800/80' }, 'TỔNG THANH TOÁN (+1k)'),
-                          e('th', { className: 'p-4 text-center' }, 'THAO TÁC')
+                          e('th', { className: 'p-4 border-r border-slate-800/80 whitespace-nowrap min-w-[130px]' }, 'TÊN NGƯỜI ĐẶT'),
+                          e('th', { className: 'p-4 text-center border-r border-slate-800/80 whitespace-nowrap min-w-[110px]' }, 'SỐ LƯỢNG'),
+                          e('th', { className: 'p-4 border-r border-slate-800/80 min-w-[200px]' }, 'TÊN SẢN PHẨM'),
+                          e('th', { className: 'p-4 text-right border-r border-slate-800/80 whitespace-nowrap min-w-[110px]' }, 'THÀNH TIỀN'),
+                          e('th', { className: 'p-4 text-right border-r border-slate-800/80 whitespace-nowrap min-w-[150px]' }, 'TỔNG THANH TOÁN (+1k)'),
+                          e('th', { className: 'p-4 text-center min-w-[180px]' }, 'THAO TÁC')
                         )
                       ),
                       e('tbody', { className: 'divide-y divide-slate-800/80' },
                         groupedPastryList.length === 0 ? e('tr', null, e('td', { colSpan: 6, className: 'text-center py-10 text-slate-500' }, 'Chưa có đơn đặt bánh nào')) :
                         groupedPastryList.map(function(g){
                           return e('tr', { key: g.customerName, className: 'hover:bg-slate-800/60 transition-all' },
-                            e('td', { className: 'p-4 font-bold text-amber-400 border-r border-slate-800/60 text-sm' }, g.customerName),
-                            e('td', { className: 'p-4 text-center border-r border-slate-800/60' },
-                              e('span', { className: 'px-3 py-1.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-extrabold rounded-xl text-xs' }, g.totalQty + ' cái')
+                            e('td', { className: 'p-4 font-bold text-amber-400 border-r border-slate-800/60 text-sm whitespace-nowrap' }, g.customerName),
+                            e('td', { className: 'p-4 text-center border-r border-slate-800/60 whitespace-nowrap' },
+                              e('span', { className: 'inline-block px-3 py-1.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-extrabold rounded-xl text-xs whitespace-nowrap' }, g.totalQty + ' cái')
                             ),
                             e('td', { className: 'p-4 font-semibold text-slate-100 border-r border-slate-800/60' },
-                              g.lines.map(function(l, idx){ return e('div', { key: idx }, l); })
+                              g.lines.map(function(l, idx){ return e('div', { key: idx, className: 'py-0.5' }, l); })
                             ),
-                            e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60' }, g.totalPrice.toLocaleString('vi-VN') + 'đ'),
-                            e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ'),
-                            e('td', { className: 'p-4 text-center' },
+                            e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60 whitespace-nowrap' }, g.totalPrice.toLocaleString('vi-VN') + 'đ'),
+                            e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60 whitespace-nowrap' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ'),
+                            e('td', { className: 'p-4 text-center whitespace-nowrap' },
                               e('div', { className: 'flex items-center justify-center gap-1.5' },
                                 e('button', {
                                   onClick: function(){ handleSendZalo(g.customerName, g.lines.join(', '), g.totalQty + ' cái'); },
@@ -712,8 +711,8 @@
               )
             ),
 
-            activeTab === 'coffee' && e('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-8' },
-              e('div', { className: 'bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
+            activeTab === 'coffee' && e('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-8' },
+              e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
                 e('h3', { className: 'font-bold text-base text-slate-100 flex items-center justify-between' },
                   e('span', { className: 'flex items-center gap-2' }, e('i', { 'data-lucide': 'coffee', className: 'w-5 h-5 text-amber-400' }), 'Đăng Ký Đặt Cà Phê'),
                   !isFormOpen && e('span', { className: 'text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30' }, 'ĐÃ ĐÓNG FORM')
@@ -752,32 +751,34 @@
                 )
               ),
 
-              e('div', { className: 'lg:col-span-2 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
+              e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
                 e('div', { className: 'flex items-center justify-between' },
                   e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Cà Phê Hôm Nay'),
                   e('button', {
                     onClick: handleSendAllZalo,
-                    className: 'px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
-                  }, e('i', { 'data-lucide': 'message-circle', className: 'w-3.5 h-3.5' }), 'Gửi Zalo')
+                    className: 'px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                  }, e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }), 'Gửi Zalo')
                 ),
-                e('div', { className: 'overflow-hidden rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
+                e('div', { className: 'overflow-x-auto rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
                   e('table', { className: 'w-full text-left text-xs text-slate-300 border-collapse' },
                     e('thead', { className: 'bg-slate-950 text-slate-400 font-black text-[11px] uppercase border-b-2 border-amber-500/40' },
                       e('tr', null,
-                        e('th', { className: 'p-4 border-r border-slate-800' }, 'TÊN NGƯỜI ĐẶT'),
-                        e('th', { className: 'p-4 text-center border-r border-slate-800' }, 'SỐ LƯỢNG'),
-                        e('th', { className: 'p-4 border-r border-slate-800' }, 'TÊN SẢN PHẨM'),
-                        e('th', { className: 'p-4 text-right' }, 'THÀNH TIỀN (+1k)')
+                        e('th', { className: 'p-4 border-r border-slate-800 min-w-[130px]' }, 'TÊN NGƯỜI ĐẶT'),
+                        e('th', { className: 'p-4 text-center border-r border-slate-800 min-w-[110px]' }, 'SỐ LƯỢNG'),
+                        e('th', { className: 'p-4 border-r border-slate-800 min-w-[200px]' }, 'TÊN SẢN PHẨM'),
+                        e('th', { className: 'p-4 text-right min-w-[130px]' }, 'THÀNH TIỀN (+1k)')
                       )
                     ),
                     e('tbody', { className: 'divide-y divide-slate-800' },
                       groupedCaffeList.length === 0 ? e('tr', null, e('td', { colSpan: 4, className: 'text-center py-8 text-slate-500' }, 'Chưa có đơn cà phê nào')) :
                       groupedCaffeList.map(function(g){
                         return e('tr', { key: g.customerName, className: 'hover:bg-slate-800/60' },
-                          e('td', { className: 'p-4 font-bold text-amber-400 border-r border-slate-800 text-sm' }, g.customerName),
-                          e('td', { className: 'p-4 text-center border-r border-slate-800 font-bold' }, g.totalQty + ' ly'),
+                          e('td', { className: 'p-4 font-bold text-amber-400 border-r border-slate-800 text-sm whitespace-nowrap' }, g.customerName),
+                          e('td', { className: 'p-4 text-center border-r border-slate-800 font-bold whitespace-nowrap' },
+                            e('span', { className: 'inline-block px-3 py-1.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-extrabold rounded-xl text-xs whitespace-nowrap' }, g.totalQty + ' ly')
+                          ),
                           e('td', { className: 'p-4 border-r border-slate-800 font-semibold' }, g.lines.join(', ')),
-                          e('td', { className: 'p-4 text-right font-black text-amber-400 font-mono text-sm' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ')
+                          e('td', { className: 'p-4 text-right font-black text-amber-400 font-mono text-sm whitespace-nowrap' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ')
                         );
                       })
                     )
