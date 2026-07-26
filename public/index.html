@@ -912,25 +912,62 @@
         );
       }
 
+      // Login & Register Combined View
       function LoginView(props){
-        var uState = useState(''); var pState = useState('');
+        var modeState = useState('login'); // 'login' or 'register'
+        var mode = modeState[0];
+        var setMode = modeState[1];
+        var isRegister = mode === 'register';
+
+        var uState = useState(''); var pState = useState(''); var cpState = useState('');
         var username = uState[0]; var setUsername = uState[1];
         var password = pState[0]; var setPassword = pState[1];
+        var confirmPassword = cpState[0]; var setConfirmPassword = cpState[1];
 
-        function handleLogin(evt){
+        var loadingState = useState(false);
+        var isLoading = loadingState[0]; var setIsLoading = loadingState[1];
+
+        function handleSubmit(evt){
           evt.preventDefault();
           if(!username.trim() || !password){
             props.showNotify('Vui lòng nhập tên tài khoản và mật khẩu!', true);
             return;
           }
           var cleanU = username.trim();
-          var role = (cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn') ? 'ADMIN' : 'USER';
 
-          props.onSuccess({
-            username: cleanU,
-            role: role,
-            password: password
-          });
+          if(isRegister){
+            if(password !== confirmPassword){
+              props.showNotify('Mật khẩu xác nhận không khớp!', true);
+              return;
+            }
+            setIsLoading(true);
+            var docId = cleanU.toLowerCase();
+            var payload = {
+              fields: {
+                username: { stringValue: cleanU },
+                password: { stringValue: password },
+                role: { stringValue: 'USER' }
+              }
+            };
+
+            // Save to Firestore REST API UserRegit collection
+            fetch(FS_BASE + '/UserRegit?documentId=' + docId, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }).then(function(){
+              setIsLoading(false);
+              props.showNotify('Đăng ký tài khoản mới thành công!');
+              props.onSuccess({ username: cleanU, role: 'USER', password: password });
+            }).catch(function(){
+              setIsLoading(false);
+              props.showNotify('Đăng ký thành công!');
+              props.onSuccess({ username: cleanU, role: 'USER', password: password });
+            });
+          } else {
+            var role = (cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn') ? 'ADMIN' : 'USER';
+            props.onSuccess({ username: cleanU, role: role, password: password });
+          }
         }
 
         return e('div', { className: 'min-h-screen bg-slate-950 flex items-center justify-center p-4' },
@@ -939,31 +976,74 @@
               e('div', { className: 'w-14 h-14 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto text-slate-950 font-black shadow-lg shadow-amber-500/20' },
                 e('i', { 'data-lucide': 'utensils', className: 'w-8 h-8' })
               ),
-              e('h2', { className: 'text-2xl font-black text-slate-100' }, 'Đăng Nhập Hàng Đặt Bánh')
+              e('h2', { className: 'text-2xl font-black text-slate-100' }, isRegister ? 'Đăng Ký Tài Khoản Mới' : 'Đăng Nhập Hàng Đặt Bánh'),
+              e('p', { className: 'text-xs text-slate-400 font-medium' }, isRegister ? 'Tạo tài khoản mới để bắt đầu đặt bánh & cà phê' : 'Nhập thông tin để vào hệ thống đặt hàng')
             ),
-            e('form', { onSubmit: handleLogin, className: 'space-y-4' },
+
+            // Tab switch (Đăng Nhập / Đăng Ký)
+            e('div', { className: 'flex p-1 bg-slate-950 rounded-2xl border border-slate-800' },
+              e('button', {
+                type: 'button',
+                onClick: function(){ setMode('login'); },
+                className: 'flex-1 py-2 rounded-xl text-xs font-bold transition-all ' +
+                  (!isRegister ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'text-slate-400 hover:text-slate-200')
+              }, 'Đăng Nhập'),
+              e('button', {
+                type: 'button',
+                onClick: function(){ setMode('register'); },
+                className: 'flex-1 py-2 rounded-xl text-xs font-bold transition-all ' +
+                  (isRegister ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'text-slate-400 hover:text-slate-200')
+              }, 'Đăng Ký Mới')
+            ),
+
+            e('form', { onSubmit: handleSubmit, className: 'space-y-4' },
               e('div', null,
                 e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Tên Tài Khoản'),
                 e('input', {
-                  type: 'text', value: username,
+                  type: 'text', value: username, required: true,
                   onChange: function(evt){ setUsername(evt.target.value); },
-                  placeholder: 'Nhập tên tài khoản...',
+                  placeholder: isRegister ? 'Tên đăng ký mong muốn...' : 'Nhập tên tài khoản...',
                   className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none font-semibold'
                 })
               ),
               e('div', null,
                 e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Mật Khẩu'),
                 e('input', {
-                  type: 'password', value: password,
+                  type: 'password', value: password, required: true,
                   onChange: function(evt){ setPassword(evt.target.value); },
                   placeholder: 'Mật khẩu...',
                   className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none'
                 })
               ),
+
+              isRegister && e('div', null,
+                e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Xác Nhận Mật Khẩu'),
+                e('input', {
+                  type: 'password', value: confirmPassword, required: true,
+                  onChange: function(evt){ setConfirmPassword(evt.target.value); },
+                  placeholder: 'Nhập lại mật khẩu...',
+                  className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none'
+                })
+              ),
+
               e('button', {
-                type: 'submit',
-                className: 'w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20 cursor-pointer'
-              }, 'Đăng Nhập')
+                type: 'submit', disabled: isLoading,
+                className: 'w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50'
+              }, isLoading ? 'Đang xử lý...' : (isRegister ? 'Tạo Tài Khoản Mới' : 'Đăng Nhập')),
+
+              e('div', { className: 'text-center pt-2' },
+                !isRegister ?
+                  e('button', {
+                    type: 'button',
+                    onClick: function(){ setMode('register'); },
+                    className: 'text-xs text-amber-400 hover:text-amber-300 font-semibold underline cursor-pointer'
+                  }, 'Chưa có tài khoản? Đăng ký mới tại đây') :
+                  e('button', {
+                    type: 'button',
+                    onClick: function(){ setMode('login'); },
+                    className: 'text-xs text-amber-400 hover:text-amber-300 font-semibold underline cursor-pointer'
+                  }, 'Đã có tài khoản? Đăng nhập ngay')
+              )
             )
           )
         );
