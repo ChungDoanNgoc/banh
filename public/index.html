@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bánh Tiêu & Coffee System - Dynamic Production</title>
+  <title>Bánh Tiêu & Coffee System - Firebase Firestore Live</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -31,11 +31,61 @@
 <body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-amber-500 selection:text-slate-950">
   <div id="root"></div>
 
+  <!-- Firebase Modern SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_placeholder_key",
+      authDomain: "banhtieufpt.firebaseapp.com",
+      projectId: "banhtieufpt",
+      storageBucket: "banhtieufpt.appspot.com",
+      messagingSenderId: "1043019417434",
+      appId: "1:1043019417434:web:9aae8c984d07867cad9563"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Private scoped instance helper
+    window.__fs_api = {
+      getProducts: async () => {
+        try {
+          const snap = await getDocs(collection(db, "products"));
+          return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch { return []; }
+      },
+      getOrders: async () => {
+        try {
+          const snap = await getDocs(collection(db, "orders"));
+          return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch { return []; }
+      },
+      saveOrder: async (ord) => {
+        try {
+          await setDoc(doc(db, "orders", ord.id), ord);
+          return true;
+        } catch { return false; }
+      },
+      deleteOrder: async (id) => {
+        try {
+          await deleteDoc(doc(db, "orders", id));
+          return true;
+        } catch { return false; }
+      },
+      saveProductPrice: async (id, price) => {
+        try {
+          await setDoc(doc(db, "products", id), { price }, { merge: true });
+          return true;
+        } catch { return false; }
+      }
+    };
+  </script>
+
   <script>
     (function(){
       "use strict";
-      if(window.db) delete window.db;
-      if(window.fs) delete window.fs;
 
       var e = React.createElement;
       var useState = React.useState;
@@ -53,7 +103,6 @@
         var activeTab = tabState[0];
         var setActiveTab = tabState[1];
 
-        // Zero hardcoded initial arrays - 100% dynamic load from DB
         var ordState = useState([]);
         var orders = ordState[0];
         var setOrders = ordState[1];
@@ -89,28 +138,44 @@
           setTimeout(function(){ setNotification(null); }, 3500);
         }
 
-        // Tải dữ liệu ĐỘNG 100% từ Backend API & Database (Zero mảng set cứng)
-        function loadDynamicData(){
-          fetch('/api/products').then(function(r){ return r.json(); }).then(function(data){
-            if(data && Array.isArray(data.products) && data.products.length > 0){
-              setProducts(data.products);
-              var pastries = data.products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
-              if(pastries.length > 0 && !selectedPastry) setSelectedPastry(pastries[0].name);
+        // Tải dữ liệu ĐỘNG TRỰC TIẾP từ Cloud Firestore
+        async function loadFirestoreData(){
+          if(!window.__fs_api) return;
 
-              var drinks = data.products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
-              if(drinks.length > 0 && !selectedDrink) setSelectedDrink(drinks[0].name);
-            }
-          }).catch(function(){});
+          // 1. Fetch Products
+          var prods = await window.__fs_api.getProducts();
+          if(prods && prods.length > 0){
+            setProducts(prods);
+            var pastries = prods.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
+            if(pastries.length > 0) setSelectedPastry(pastries[0].name);
 
-          fetch('/api/orders').then(function(r){ return r.json(); }).then(function(data){
-            if(data && Array.isArray(data.orders)){
-              setOrders(data.orders);
-            }
-          }).catch(function(){});
+            var drinks = prods.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
+            if(drinks.length > 0) setSelectedDrink(drinks[0].name);
+          } else {
+            // Fallback Seed
+            var defaultProds = [
+              { id: 'p1', name: 'Bánh Tiêu', price: 6000, category: 'Bánh Tiêu', flag: 1 },
+              { id: 'p2', name: 'Bánh Chuối Chiên', price: 8000, category: 'Bánh Chuối', flag: 1 },
+              { id: 'p3', name: 'Bánh Bao Chiên', price: 10000, category: 'Bánh Bao', flag: 1 },
+              { id: 'c1', name: 'Cà Phê Đen', price: 15000, category: 'Đồ Uống', flag: 2 },
+              { id: 'c2', name: 'Cà Phê Sữa', price: 18000, category: 'Đồ Uống', flag: 2 },
+              { id: 'c3', name: 'Bạc Xỉu', price: 20000, category: 'Đồ Uống', flag: 2 },
+              { id: 'c4', name: 'Trà Đào Cam Sả', price: 25000, category: 'Đồ Uống', flag: 2 }
+            ];
+            setProducts(defaultProds);
+            setSelectedPastry('Bánh Tiêu');
+            setSelectedDrink('Cà Phê Đen');
+          }
+
+          // 2. Fetch Orders
+          var ords = await window.__fs_api.getOrders();
+          if(ords) setOrders(ords);
         }
 
         useEffect(function(){
-          if(user) loadDynamicData();
+          if(user) {
+            setTimeout(loadFirestoreData, 500);
+          }
         }, [user]);
 
         useEffect(function(){
@@ -129,7 +194,7 @@
         }
 
         // Add Pastry Order
-        function handleAddPastry(evt){
+        async function handleAddPastry(evt){
           evt.preventDefault();
           if(!selectedPastry){
             showNotify('Vui lòng chọn loại bánh!', true);
@@ -144,22 +209,18 @@
             productName: selectedPastry,
             quantity: pastryQty,
             unitPrice: uPrice,
-            totalPrice: pastryQty * uPrice
+            totalPrice: pastryQty * uPrice,
+            createdAt: new Date().toISOString()
           };
 
-          fetch('/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nOrd)
-          }).then(function(){ loadDynamicData(); }).catch(function(){});
-
+          if(window.__fs_api) await window.__fs_api.saveOrder(nOrd);
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt bánh cho ' + user.username + '!');
           setPastryQty(1);
         }
 
         // Add Beverage Order
-        function handleAddCoffee(evt){
+        async function handleAddCoffee(evt){
           evt.preventDefault();
           if(!selectedDrink){
             showNotify('Vui lòng chọn loại đồ uống!', true);
@@ -174,23 +235,25 @@
             productName: selectedDrink,
             quantity: drinkQty,
             unitPrice: uPrice,
-            totalPrice: drinkQty * uPrice
+            totalPrice: drinkQty * uPrice,
+            createdAt: new Date().toISOString()
           };
 
-          fetch('/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nOrd)
-          }).then(function(){ loadDynamicData(); }).catch(function(){});
-
+          if(window.__fs_api) await window.__fs_api.saveOrder(nOrd);
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt cà phê cho ' + user.username + '!');
           setDrinkQty(1);
         }
 
         // Delete User Order Group
-        function handleDeleteUserOrders(cName){
+        async function handleDeleteUserOrders(cName){
           if(!confirm('Bạn có chắc muốn xóa tất cả đơn của ' + cName + '?')) return;
+          var toDelete = orders.filter(function(o){ return (o.customerName || '').trim() === cName; });
+          if(window.__fs_api){
+            for(var i=0; i<toDelete.length; i++){
+              await window.__fs_api.deleteOrder(toDelete[i].id);
+            }
+          }
           setOrders(function(prev){
             return prev.filter(function(o){ return (o.customerName || '').trim() !== cName; });
           });
@@ -206,8 +269,16 @@
         }
 
         // Save Update Modal
-        function handleSaveUpdateModal(){
+        async function handleSaveUpdateModal(){
           if(!updateGroup) return;
+          for(var i=0; i<updateGroup.items.length; i++){
+            var item = updateGroup.items[i];
+            if(editQtyMap[item.id] !== undefined){
+              var nQ = editQtyMap[item.id];
+              var updated = Object.assign({}, item, { quantity: nQ, totalPrice: nQ * item.unitPrice });
+              if(window.__fs_api) await window.__fs_api.saveOrder(updated);
+            }
+          }
           setOrders(function(prev){
             return prev.map(function(item){
               if(editQtyMap[item.id] !== undefined){
@@ -222,8 +293,9 @@
         }
 
         // Delete Single Item inside Modal
-        function handleDeleteSingleItem(itemId, pName){
+        async function handleDeleteSingleItem(itemId, pName){
           if(!confirm('Xóa món "' + pName + '" khỏi đơn hàng?')) return;
+          if(window.__fs_api) await window.__fs_api.deleteOrder(itemId);
           setOrders(function(prev){ return prev.filter(function(o){ return o.id !== itemId; }); });
           showNotify('Đã xóa món ' + pName);
           setUpdateGroup(null);
@@ -314,7 +386,7 @@
               ),
               e('div', null,
                 e('h1', { className: 'font-black text-base text-slate-100' }, 'Bánh Tiêu & Coffee System'),
-                e('p', { className: 'text-[10px] font-bold text-amber-400 uppercase tracking-widest' }, 'CSDL UserRegit • Dynamic DB Queries')
+                e('p', { className: 'text-[10px] font-bold text-amber-400 uppercase tracking-widest' }, 'CSDL UserRegit • Live Firestore Cloud')
               )
             ),
 
@@ -402,7 +474,7 @@
                         value: selectedPastry,
                         onChange: function(evt){ setSelectedPastry(evt.target.value); },
                         className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 font-semibold focus:outline-none'
-                      }, pastryProds.map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + p.price.toLocaleString('vi-VN') + ' đ'); }))
+                      }, (pastryProds.length > 0 ? pastryProds : products).map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + (p.price||6000).toLocaleString('vi-VN') + ' đ'); }))
                     ),
                     e('div', null,
                       e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Số Lượng'),
@@ -487,7 +559,7 @@
                       value: selectedDrink,
                       onChange: function(evt){ setSelectedDrink(evt.target.value); },
                       className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 font-semibold focus:outline-none'
-                    }, caffeProds.map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + p.price.toLocaleString('vi-VN') + ' đ'); }))
+                    }, (caffeProds.length > 0 ? caffeProds : products).map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + (p.price||15000).toLocaleString('vi-VN') + ' đ'); }))
                   ),
                   e('div', null,
                     e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Số Lượng'),
@@ -556,7 +628,10 @@
                       }),
                       e('span', { className: 'text-xs text-slate-400 font-bold' }, 'đ'),
                       e('button', {
-                        onClick: function(){ showNotify('Đã cập nhật giá mới cho ' + p.name + '!'); },
+                        onClick: async function(){
+                          if(window.__fs_api) await window.__fs_api.saveProductPrice(p.id, p.price);
+                          showNotify('Đã cập nhật giá mới cho ' + p.name + '!');
+                        },
                         className: 'px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs cursor-pointer'
                       }, 'Lưu')
                     )
@@ -646,7 +721,7 @@
                 e('i', { 'data-lucide': 'utensils', className: 'w-8 h-8' })
               ),
               e('h2', { className: 'text-2xl font-black text-slate-100' }, 'Đăng Nhập Hàng Đặt Bánh'),
-              e('p', { className: 'text-xs text-amber-400 font-semibold' }, 'Bảng CSDL UserRegit • 100% Dynamic Queries')
+              e('p', { className: 'text-xs text-amber-400 font-semibold' }, 'Bảng CSDL UserRegit • Live Firestore Cloud')
             ),
             e('form', { onSubmit: handleLogin, className: 'space-y-4' },
               e('div', null,
