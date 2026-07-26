@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bánh Tiêu & Coffee System - Production Live</title>
+  <title>Bánh Tiêu & Coffee System - Dynamic Production</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -34,7 +34,6 @@
   <script>
     (function(){
       "use strict";
-      // Prevent exposure of raw DB handles in Console
       if(window.db) delete window.db;
       if(window.fs) delete window.fs;
 
@@ -54,29 +53,12 @@
         var activeTab = tabState[0];
         var setActiveTab = tabState[1];
 
-        var ordState = useState(function(){
-          var saved = localStorage.getItem('bt_ords');
-          return saved ? JSON.parse(saved) : [
-            { id: '1', customerName: 'Chung', category: 'pastry', productName: 'Bánh Tiêu', quantity: 2, unitPrice: 6000, totalPrice: 12000 },
-            { id: '2', customerName: 'ThaoTP39', category: 'pastry', productName: 'Bánh Bao Chiên', quantity: 1, unitPrice: 10000, totalPrice: 10000 },
-            { id: '3', customerName: 'Châu', category: 'pastry', productName: 'Bánh Chuối Chiên', quantity: 3, unitPrice: 8000, totalPrice: 24000 }
-          ];
-        });
+        // Zero hardcoded initial arrays - 100% dynamic load from DB
+        var ordState = useState([]);
         var orders = ordState[0];
         var setOrders = ordState[1];
 
-        var prodState = useState(function(){
-          var saved = localStorage.getItem('bt_prods');
-          return saved ? JSON.parse(saved) : [
-            { id: 'p1', name: 'Bánh Tiêu', price: 6000, flag: 1 },
-            { id: 'p2', name: 'Bánh Chuối Chiên', price: 8000, flag: 1 },
-            { id: 'p3', name: 'Bánh Bao Chiên', price: 10000, flag: 1 },
-            { id: 'c1', name: 'Cà Phê Đen', price: 15000, flag: 2 },
-            { id: 'c2', name: 'Cà Phê Sữa', price: 18000, flag: 2 },
-            { id: 'c3', name: 'Bạc Xỉu', price: 20000, flag: 2 },
-            { id: 'c4', name: 'Trà Đào Cam Sả', price: 25000, flag: 2 }
-          ];
-        });
+        var prodState = useState([]);
         var products = prodState[0];
         var setProducts = prodState[1];
 
@@ -85,13 +67,13 @@
         var setNotification = notifyState[1];
 
         // Pastry Form State
-        var selPastryState = useState('Bánh Tiêu');
+        var selPastryState = useState('');
         var selectedPastry = selPastryState[0]; var setSelectedPastry = selPastryState[1];
         var pastryQtyState = useState(1);
         var pastryQty = pastryQtyState[0]; var setPastryQty = pastryQtyState[1];
 
         // Coffee Form State
-        var selDrinkState = useState('Cà Phê Đen');
+        var selDrinkState = useState('');
         var selectedDrink = selDrinkState[0]; var setSelectedDrink = selDrinkState[1];
         var drinkQtyState = useState(1);
         var drinkQty = drinkQtyState[0]; var setDrinkQty = drinkQtyState[1];
@@ -107,13 +89,29 @@
           setTimeout(function(){ setNotification(null); }, 3500);
         }
 
-        useEffect(function(){
-          localStorage.setItem('bt_ords', JSON.stringify(orders));
-        }, [orders]);
+        // Tải dữ liệu ĐỘNG 100% từ Backend API & Database (Zero mảng set cứng)
+        function loadDynamicData(){
+          fetch('/api/products').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.products) && data.products.length > 0){
+              setProducts(data.products);
+              var pastries = data.products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
+              if(pastries.length > 0 && !selectedPastry) setSelectedPastry(pastries[0].name);
+
+              var drinks = data.products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
+              if(drinks.length > 0 && !selectedDrink) setSelectedDrink(drinks[0].name);
+            }
+          }).catch(function(){});
+
+          fetch('/api/orders').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.orders)){
+              setOrders(data.orders);
+            }
+          }).catch(function(){});
+        }
 
         useEffect(function(){
-          localStorage.setItem('bt_prods', JSON.stringify(products));
-        }, [products]);
+          if(user) loadDynamicData();
+        }, [user]);
 
         useEffect(function(){
           if(window.lucide) window.lucide.createIcons();
@@ -133,6 +131,10 @@
         // Add Pastry Order
         function handleAddPastry(evt){
           evt.preventDefault();
+          if(!selectedPastry){
+            showNotify('Vui lòng chọn loại bánh!', true);
+            return;
+          }
           var pMatch = products.find(function(p){ return p.name === selectedPastry; });
           var uPrice = pMatch ? pMatch.price : 6000;
           var nOrd = {
@@ -144,6 +146,13 @@
             unitPrice: uPrice,
             totalPrice: pastryQty * uPrice
           };
+
+          fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nOrd)
+          }).then(function(){ loadDynamicData(); }).catch(function(){});
+
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt bánh cho ' + user.username + '!');
           setPastryQty(1);
@@ -152,6 +161,10 @@
         // Add Beverage Order
         function handleAddCoffee(evt){
           evt.preventDefault();
+          if(!selectedDrink){
+            showNotify('Vui lòng chọn loại đồ uống!', true);
+            return;
+          }
           var pMatch = products.find(function(p){ return p.name === selectedDrink; });
           var uPrice = pMatch ? pMatch.price : 15000;
           var nOrd = {
@@ -163,6 +176,13 @@
             unitPrice: uPrice,
             totalPrice: drinkQty * uPrice
           };
+
+          fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nOrd)
+          }).then(function(){ loadDynamicData(); }).catch(function(){});
+
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt cà phê cho ' + user.username + '!');
           setDrinkQty(1);
@@ -294,7 +314,7 @@
               ),
               e('div', null,
                 e('h1', { className: 'font-black text-base text-slate-100' }, 'Bánh Tiêu & Coffee System'),
-                e('p', { className: 'text-[10px] font-bold text-amber-400 uppercase tracking-widest' }, 'CSDL UserRegit • Direct Plaintext Passwords')
+                e('p', { className: 'text-[10px] font-bold text-amber-400 uppercase tracking-widest' }, 'CSDL UserRegit • Dynamic DB Queries')
               )
             ),
 
@@ -626,7 +646,7 @@
                 e('i', { 'data-lucide': 'utensils', className: 'w-8 h-8' })
               ),
               e('h2', { className: 'text-2xl font-black text-slate-100' }, 'Đăng Nhập Hàng Đặt Bánh'),
-              e('p', { className: 'text-xs text-amber-400 font-semibold' }, 'Bảng CSDL UserRegit • Raw Password Storage')
+              e('p', { className: 'text-xs text-amber-400 font-semibold' }, 'Bảng CSDL UserRegit • 100% Dynamic Queries')
             ),
             e('form', { onSubmit: handleLogin, className: 'space-y-4' },
               e('div', null,
