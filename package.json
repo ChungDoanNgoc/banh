@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "build": "javascript-obfuscator src/app.js --output public/js/app.min.js --compact true --string-array true --string-array-encoding base64 --split-strings true --target browser"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -30,6 +27,7 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.18",
     "firebase-tools": "^15.24.0",
+    "javascript-obfuscator": "^4.1.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3"

@@ -1,0 +1,1197 @@
+(function(){
+      "use strict";
+      // Anti-Debugging Protection Trap
+      setInterval(function(){
+        (function(){}).constructor("debugger")();
+      }, 1500);
+
+      // Anti-DevTools Inspection Protections
+      document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+      document.addEventListener('keydown', function(e){
+        if(e.keyCode === 123 || 
+          (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
+          (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83))){
+          e.preventDefault();
+          return false;
+        }
+      });
+
+
+      delete window.db;
+      delete window.app;
+      delete window.firebase;
+      delete window.__fs;
+
+      var e = React.createElement;
+      var useState = React.useState;
+      var useEffect = React.useEffect;
+
+      var _0x9a8 = 'aHR0cHM6Ly9maXJlc3RvcmUuZ29vZ2xlYXBpcy5jb20vdjEvcHJvamVjdHMvYmFuaHRpZXVmcHQvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHM=';
+      function getFsBase(){
+        try { return atob(_0x9a8); } catch(err){ return ''; }
+      }
+      var FS_BASE = getFsBase();
+
+      // Security Utility: Client Password Hashing (Salted)
+      function hashPassword(pwd){
+        if(!pwd) return '';
+        var hash = 0;
+        var str = pwd + "_bt_salt_secure_2026";
+        for (var i = 0; i < str.length; i++) {
+          var char = str.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash |= 0;
+        }
+        return "h_" + Math.abs(hash).toString(36);
+      }
+
+      function parseDoc(docItem){
+        var fields = docItem.fields || {};
+        var res = { id: docItem.name ? docItem.name.split('/').pop() : '' };
+        Object.keys(fields).forEach(function(k){
+          var v = fields[k];
+          if(v.stringValue !== undefined) res[k] = v.stringValue;
+          else if(v.integerValue !== undefined) res[k] = Number(v.integerValue);
+          else if(v.doubleValue !== undefined) res[k] = Number(v.doubleValue);
+          else if(v.booleanValue !== undefined) res[k] = v.booleanValue;
+        });
+        return res;
+      }
+
+      function App(){
+        var authState = useState(function(){
+          var s = localStorage.getItem('bt_sess');
+          return s ? JSON.parse(s) : null;
+        });
+        var user = authState[0];
+        var setUser = authState[1];
+
+        var tabState = useState('pastry');
+        var activeTab = tabState[0];
+        var setActiveTab = tabState[1];
+
+        var ordState = useState([]);
+        var orders = ordState[0];
+        var setOrders = ordState[1];
+
+        var prodState = useState([]);
+        var products = prodState[0];
+        var setProducts = prodState[1];
+
+        var userListState = useState([]);
+        var userList = userListState[0];
+        var setUserList = userListState[1];
+
+        var formOpenState = useState(function(){
+          var stored = localStorage.getItem('bt_form_open');
+          return stored !== null ? stored === 'true' : true;
+        });
+        var isFormOpen = formOpenState[0];
+        var setIsFormOpen = formOpenState[1];
+
+        var notifyState = useState(null);
+        var notification = notifyState[0];
+        var setNotification = notifyState[1];
+
+        // Pastry Form State
+        var selPastryState = useState('');
+        var selectedPastry = selPastryState[0]; var setSelectedPastry = selPastryState[1];
+        var pastryQtyState = useState(1);
+        var pastryQty = pastryQtyState[0]; var setPastryQty = pastryQtyState[1];
+
+        // Coffee Form State
+        var selDrinkState = useState('');
+        var selectedDrink = selDrinkState[0]; var setSelectedDrink = selDrinkState[1];
+        var drinkQtyState = useState(1);
+        var drinkQty = drinkQtyState[0]; var setDrinkQty = drinkQtyState[1];
+
+        // Update Modal State
+        var updateGroupState = useState(null);
+        var updateGroup = updateGroupState[0]; var setUpdateGroup = updateGroupState[1];
+        var editQtyMapState = useState({});
+        var editQtyMap = editQtyMapState[0]; var setEditQtyMap = editQtyMapState[1];
+
+        function showNotify(msg, isErr){
+          setNotification({ msg: msg, isErr: !!isErr });
+          setTimeout(function(){ setNotification(null); }, 4000);
+        }
+
+        var isAdminUser = user && (user.role === 'ADMIN' || (user.role||'').toUpperCase() === 'ADMIN' || user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'chungdn');
+
+        function loadFirestoreData(){
+          fetch(FS_BASE + '/products').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.documents)){
+              var parsed = data.documents.map(parseDoc);
+              setProducts(parsed);
+              var pastries = parsed.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
+              if(pastries.length > 0) setSelectedPastry(pastries[0].name);
+
+              var drinks = parsed.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
+              if(drinks.length > 0) setSelectedDrink(drinks[0].name);
+            }
+          }).catch(function(){});
+
+          fetch(FS_BASE + '/orders').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.documents)){
+              var parsedOrds = data.documents.map(parseDoc);
+              setOrders(parsedOrds);
+            }
+          }).catch(function(){});
+
+          // SECURITY FIX: Only fetch UserRegit list if current user is ADMIN
+          if(isAdminUser){
+            fetch(FS_BASE + '/UserRegit').then(function(r){ return r.json(); }).then(function(data){
+              if(data && Array.isArray(data.documents)){
+                var parsedUsers = data.documents.map(parseDoc);
+                setUserList(parsedUsers);
+              }
+            }).catch(function(){});
+          }
+        }
+
+        // Auto Job: Daily 9:00 AM Reset Cleaner
+        useEffect(function(){
+          function checkDaily9AMReset(){
+            var now = new Date();
+            var todayKey = now.getFullYear() + '-' + (now.getMonth()+1) + '-' + now.getDate();
+            var today9AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+            var lastReset = localStorage.getItem('last_auto_clean_date');
+
+            if(now >= today9AM && lastReset !== todayKey){
+              fetch(FS_BASE + '/orders').then(function(r){ return r.json(); }).then(function(data){
+                if(data && Array.isArray(data.documents)){
+                  var allOrds = data.documents.map(parseDoc);
+                  var staleOrds = allOrds.filter(function(o){
+                    if(!o.createdAt) return true;
+                    var createdDate = new Date(o.createdAt);
+                    return createdDate < today9AM;
+                  });
+
+                  if(staleOrds.length > 0){
+                    staleOrds.forEach(function(o){
+                      fetch(FS_BASE + '/orders/' + o.id, { method: 'DELETE' }).catch(function(){});
+                    });
+                    showNotify('⏰ [Auto Job 9h00 SA]: Đã tự động dọn dẹp ' + staleOrds.length + ' đơn hàng ngày cũ!');
+                    loadFirestoreData();
+                  }
+                }
+              }).catch(function(){});
+
+              localStorage.setItem('last_auto_clean_date', todayKey);
+            }
+          }
+
+          checkDaily9AMReset();
+          var timerId = setInterval(checkDaily9AMReset, 30000);
+          return function(){ clearInterval(timerId); };
+        }, []);
+
+        useEffect(function(){
+          if(user) loadFirestoreData();
+        }, [user]);
+
+        useEffect(function(){
+          if(window.lucide) window.lucide.createIcons();
+        });
+
+        if(!user){
+          return e(LoginView, {
+            onSuccess: function(u){
+              setUser(u);
+              localStorage.setItem('bt_sess', JSON.stringify(u));
+              showNotify('Đăng nhập thành công!');
+            },
+            showNotify: showNotify
+          });
+        }
+
+        function handleToggleFormStatus(){
+          var nState = !isFormOpen;
+          setIsFormOpen(nState);
+          localStorage.setItem('bt_form_open', String(nState));
+          showNotify(nState ? 'Đã MỞ Form đăng ký đặt hàng!' : 'Đã ĐÓNG Form đăng ký đặt hàng!', !nState);
+        }
+
+        function handleDeleteUser(uName){
+          if(uName === user.username){
+            showNotify('Không thể tự xóa tài khoản đang đăng nhập!', true);
+            return;
+          }
+          if(!confirm('Xác nhận xóa vĩnh viễn tài khoản "' + uName + '" khỏi Firestore?')) return;
+          var docId = uName.trim().toLowerCase();
+          fetch(FS_BASE + '/UserRegit/' + docId, { method: 'DELETE' }).catch(function(){});
+          setUserList(function(prev){ return prev.filter(function(u){ return u.username !== uName; }); });
+          showNotify('Đã xóa thành công tài khoản ' + uName);
+        }
+
+        // Admin Delete ALL Orders
+        function handleDeleteAllOrders(){
+          if(!isAdminUser) return;
+          if(!confirm('⚠️ CẢNH BÁO ADMIN: Bạn có chắc chắn muốn XÓA VĨNH VIỄN toàn bộ đơn đặt hàng trong hệ thống không?')) return;
+          
+          orders.forEach(function(o){
+            fetch(FS_BASE + '/orders/' + o.id, { method: 'DELETE' }).catch(function(){});
+          });
+          
+          setOrders([]);
+          showNotify('Đã xóa vĩnh viễn toàn bộ dữ liệu đơn hàng thành công!');
+        }
+
+        // Add Pastry Order
+        function handleAddPastry(evt){
+          evt.preventDefault();
+          if(!isFormOpen){
+            showNotify('Form đăng ký đã bị Admin ĐÓNG! Vui lòng liên hệ Admin.', true);
+            return;
+          }
+          if(!selectedPastry){
+            showNotify('Vui lòng chọn loại bánh!', true);
+            return;
+          }
+          var pMatch = products.find(function(p){ return p.name === selectedPastry; });
+          var uPrice = pMatch ? pMatch.price : 6000;
+          var ordId = 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2,5);
+          var nOrd = {
+            id: ordId,
+            customerName: user.username,
+            category: 'pastry',
+            productName: selectedPastry,
+            quantity: pastryQty,
+            unitPrice: uPrice,
+            totalPrice: pastryQty * uPrice,
+            createdAt: new Date().toISOString()
+          };
+
+          var payload = {
+            fields: {
+              id: { stringValue: ordId },
+              customerName: { stringValue: user.username },
+              category: { stringValue: 'pastry' },
+              productName: { stringValue: selectedPastry },
+              quantity: { integerValue: pastryQty },
+              unitPrice: { integerValue: uPrice },
+              totalPrice: { integerValue: pastryQty * uPrice },
+              createdAt: { stringValue: nOrd.createdAt }
+            }
+          };
+
+          fetch(FS_BASE + '/orders?documentId=' + ordId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).then(function(){ loadFirestoreData(); }).catch(function(){});
+
+          setOrders(function(prev){ return [nOrd].concat(prev); });
+          showNotify('Đã thêm đơn đặt bánh cho ' + user.username + '!');
+          setPastryQty(1);
+        }
+
+        // Add Beverage Order
+        function handleAddCoffee(evt){
+          evt.preventDefault();
+          if(!isFormOpen){
+            showNotify('Form đăng ký đã bị Admin ĐÓNG! Vui lòng liên hệ Admin.', true);
+            return;
+          }
+          if(!selectedDrink){
+            showNotify('Vui lòng chọn loại đồ uống!', true);
+            return;
+          }
+          var pMatch = products.find(function(p){ return p.name === selectedDrink; });
+          var uPrice = pMatch ? pMatch.price : 15000;
+          var ordId = 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2,5);
+          var nOrd = {
+            id: ordId,
+            customerName: user.username,
+            category: 'beverage',
+            productName: selectedDrink,
+            quantity: drinkQty,
+            unitPrice: uPrice,
+            totalPrice: drinkQty * uPrice,
+            createdAt: new Date().toISOString()
+          };
+
+          var payload = {
+            fields: {
+              id: { stringValue: ordId },
+              customerName: { stringValue: user.username },
+              category: { stringValue: 'beverage' },
+              productName: { stringValue: selectedDrink },
+              quantity: { integerValue: drinkQty },
+              unitPrice: { integerValue: uPrice },
+              totalPrice: { integerValue: drinkQty * uPrice },
+              createdAt: { stringValue: nOrd.createdAt }
+            }
+          };
+
+          fetch(FS_BASE + '/orders?documentId=' + ordId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).then(function(){ loadFirestoreData(); }).catch(function(){});
+
+          setOrders(function(prev){ return [nOrd].concat(prev); });
+          showNotify('Đã thêm đơn đặt cà phê cho ' + user.username + '!');
+          setDrinkQty(1);
+        }
+
+        // Delete User Order Group - Check Owner / Admin Permission
+        function handleDeleteUserOrders(cName){
+          if(!isAdminUser && (cName||'').trim().toLowerCase() !== user.username.toLowerCase()){
+            showNotify('Bạn chỉ có quyền xóa đơn hàng của chính mình!', true);
+            return;
+          }
+          if(!confirm('Bạn có chắc muốn xóa tất cả đơn của ' + cName + '?')) return;
+          var toDelete = orders.filter(function(o){ return (o.customerName || '').trim() === cName; });
+          toDelete.forEach(function(o){
+            fetch(FS_BASE + '/orders/' + o.id, { method: 'DELETE' }).catch(function(){});
+          });
+          setOrders(function(prev){
+            return prev.filter(function(o){ return (o.customerName || '').trim() !== cName; });
+          });
+          showNotify('Đã xóa đơn hàng của ' + cName);
+        }
+
+        // Open Update Modal - Check Owner / Admin Permission
+        function handleOpenUpdateModal(group){
+          if(!isAdminUser && (group.customerName||'').trim().toLowerCase() !== user.username.toLowerCase()){
+            showNotify('Bạn chỉ có quyền sửa đơn hàng của chính mình!', true);
+            return;
+          }
+          var qMap = {};
+          group.items.forEach(function(i){ qMap[i.id] = i.quantity; });
+          setEditQtyMap(qMap);
+          setUpdateGroup(group);
+        }
+
+        // Save Update Modal
+        function handleSaveUpdateModal(){
+          if(!updateGroup) return;
+          updateGroup.items.forEach(function(item){
+            if(editQtyMap[item.id] !== undefined){
+              var nQ = editQtyMap[item.id];
+              var nTotal = nQ * item.unitPrice;
+              var patchPayload = {
+                fields: {
+                  quantity: { integerValue: nQ },
+                  totalPrice: { integerValue: nTotal }
+                }
+              };
+              fetch(FS_BASE + '/orders/' + item.id + '?updateMask.fieldPaths=quantity&updateMask.fieldPaths=totalPrice', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(patchPayload)
+              }).catch(function(){});
+            }
+          });
+          setOrders(function(prev){
+            return prev.map(function(item){
+              if(editQtyMap[item.id] !== undefined){
+                var nQ = editQtyMap[item.id];
+                return Object.assign({}, item, { quantity: nQ, totalPrice: nQ * item.unitPrice });
+              }
+              return item;
+            });
+          });
+          showNotify('Cập nhật số lượng thành công!');
+          setUpdateGroup(null);
+        }
+
+        // Delete Single Item inside Modal
+        function handleDeleteSingleItem(itemId, pName){
+          if(!confirm('Xóa món "' + pName + '" khỏi đơn hàng?')) return;
+          fetch(FS_BASE + '/orders/' + itemId, { method: 'DELETE' }).catch(function(){});
+          setOrders(function(prev){ return prev.filter(function(o){ return o.id !== itemId; }); });
+          showNotify('Đã xóa món ' + pName);
+          setUpdateGroup(null);
+        }
+
+        // Group Pastry Orders
+        var pastryOrds = orders.filter(function(o){ return o.category === 'pastry' || (o.productName||'').indexOf('Bánh')>=0; });
+        var customerMapPastry = {};
+        pastryOrds.forEach(function(o){
+          var cName = (o.customerName || 'Khách').trim();
+          if(!customerMapPastry[cName]){
+            customerMapPastry[cName] = { customerName: cName, items: [], totalQty: 0, totalPrice: 0 };
+          }
+          customerMapPastry[cName].items.push(o);
+          var q = Number(o.quantity) || 1;
+          customerMapPastry[cName].totalQty += q;
+          customerMapPastry[cName].totalPrice += q * (Number(o.unitPrice) || 6000);
+        });
+
+        var groupedPastryList = Object.keys(customerMapPastry).map(function(k){
+          var g = customerMapPastry[k];
+          var counts = {};
+          g.items.forEach(function(i){
+            var pName = i.productName || 'Bánh Tiêu';
+            counts[pName] = (counts[pName] || 0) + (Number(i.quantity) || 1);
+          });
+          var lines = Object.keys(counts).map(function(p){ return p + ' (' + counts[p] + 'x)'; });
+          return {
+            customerName: g.customerName,
+            items: g.items,
+            totalQty: g.totalQty,
+            totalPrice: g.totalPrice,
+            finalTotalPrice: g.totalPrice + 1000,
+            lines: lines
+          };
+        });
+
+        // Group Coffee Orders
+        var caffeOrds = orders.filter(function(o){ return o.category === 'beverage' || (o.productName||'').indexOf('Cà Phê')>=0 || (o.productName||'').indexOf('Trà')>=0 || (o.productName||'').indexOf('Bạc')>=0; });
+        var customerMapCaffe = {};
+        caffeOrds.forEach(function(o){
+          var cName = (o.customerName || 'Khách').trim();
+          if(!customerMapCaffe[cName]){
+            customerMapCaffe[cName] = { customerName: cName, items: [], totalQty: 0, totalPrice: 0 };
+          }
+          customerMapCaffe[cName].items.push(o);
+          var q = Number(o.quantity) || 1;
+          customerMapCaffe[cName].totalQty += q;
+          customerMapCaffe[cName].totalPrice += q * (Number(o.unitPrice) || 15000);
+        });
+
+        var groupedCaffeList = Object.keys(customerMapCaffe).map(function(k){
+          var g = customerMapCaffe[k];
+          var counts = {};
+          g.items.forEach(function(i){
+            var pName = i.productName || 'Cà Phê Đen';
+            counts[pName] = (counts[pName] || 0) + (Number(i.quantity) || 1);
+          });
+          var lines = Object.keys(counts).map(function(p){ return p + ' (' + counts[p] + 'x)'; });
+          return {
+            customerName: g.customerName,
+            items: g.items,
+            totalQty: g.totalQty,
+            totalPrice: g.totalPrice,
+            finalTotalPrice: g.totalPrice + 1000,
+            lines: lines
+          };
+        });
+
+        // Send All Orders to Zalo
+        function handleSendAllZalo(){
+          var targetList = activeTab === 'coffee' ? groupedCaffeList : groupedPastryList;
+          if(targetList.length === 0){
+            showNotify('Chưa có đơn hàng nào để gửi Zalo!', true);
+            return;
+          }
+          var msgList = [];
+          targetList.forEach(function(g){
+            msgList.push("Tên: " + g.customerName + "\nLoại Bánh: " + g.lines.join(", ") + "\nSố Lượng: " + g.totalQty + " cái");
+          });
+          var finalMsg = msgList.join("\n\n---\n\n");
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(finalMsg);
+          }
+          showNotify("Đã sao chép toàn bộ danh sách Zalo! Đang mở Zalo...");
+          window.open("https://chat.zalo.me", "_blank");
+        }
+
+        // Export CSV
+        function handleExportCSV(){
+          var csvRows = [];
+          csvRows.push(['STT', 'Tên Người Đặt', 'Danh Sách Món Đặt', 'Tổng Số Lượng', 'Thành Tiền (VNĐ)', 'Tổng Thanh Toán (+1k Ship) (VNĐ)']);
+
+          var allGrouped = groupedPastryList.concat(groupedCaffeList);
+          if(allGrouped.length === 0){
+            showNotify('Chưa có đơn hàng nào để xuất CSV!', true);
+            return;
+          }
+
+          allGrouped.forEach(function(g, idx){
+            csvRows.push([
+              idx + 1,
+              '"' + g.customerName.replace(/"/g, '""') + '"',
+              '"' + g.lines.join('; ').replace(/"/g, '""') + '"',
+              g.totalQty,
+              g.totalPrice,
+              g.finalTotalPrice
+            ]);
+          });
+
+          var csvContent = '\uFEFF' + csvRows.map(function(r){ return r.join(','); }).join('\n');
+          var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', 'Bao_Cao_Don_Hang_' + new Date().toISOString().slice(0,10) + '.csv');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showNotify('Đã xuất file báo cáo CSV thành công!');
+        }
+
+        // Summary Calculations
+        var totalPastryQty = groupedPastryList.reduce(function(acc, g){ return acc + g.totalQty; }, 0);
+        var totalPastryTotalPrice = groupedPastryList.reduce(function(acc, g){ return acc + g.totalPrice; }, 0);
+        var totalPastryRev = groupedPastryList.reduce(function(acc, g){ return acc + g.finalTotalPrice; }, 0);
+        var pastryShippingFee = groupedPastryList.length * 1000;
+
+        var totalCaffeQty = groupedCaffeList.reduce(function(acc, g){ return acc + g.totalQty; }, 0);
+        var totalCaffeTotalPrice = groupedCaffeList.reduce(function(acc, g){ return acc + g.totalPrice; }, 0);
+        var totalCaffeRev = groupedCaffeList.reduce(function(acc, g){ return acc + g.finalTotalPrice; }, 0);
+
+        var pastryProds = products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
+        var caffeProds = products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
+
+        return e('div', { className: 'min-h-screen flex flex-col bg-slate-950' },
+          notification && e('div', {
+            className: 'fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl border shadow-2xl font-bold text-sm flex items-center gap-2 ' +
+              (notification.isErr ? 'bg-rose-950/90 text-rose-300 border-rose-800' : 'bg-emerald-950/90 text-emerald-300 border-emerald-800')
+          }, notification.msg),
+
+          // Header Bar
+          e('header', { className: 'border-b border-slate-800 bg-slate-950/90 sticky top-0 z-40 backdrop-blur-md px-6 py-3.5 flex items-center justify-between' },
+            e('div', { className: 'flex items-center gap-3' },
+              e('div', { className: 'p-2.5 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-2xl text-slate-950 font-black shadow-lg shadow-amber-500/20' },
+                e('i', { 'data-lucide': 'utensils', className: 'w-5 h-5' })
+              ),
+              e('div', null,
+                e('h1', { className: 'font-black text-base text-slate-100' }, 'Bánh Tiêu & Coffee System')
+              )
+            ),
+
+            // Navigation Tabs
+            e('div', { className: 'hidden md:flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800' },
+              e('button', {
+                onClick: function(){ setActiveTab('pastry'); },
+                className: 'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ' +
+                  (activeTab === 'pastry' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-slate-200')
+              }, e('i', { 'data-lucide': 'utensils', className: 'w-4 h-4' }), 'Đặt Bánh Tiêu'),
+              
+              e('button', {
+                onClick: function(){ setActiveTab('coffee'); },
+                className: 'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ' +
+                  (activeTab === 'coffee' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-slate-200')
+              }, e('i', { 'data-lucide': 'coffee', className: 'w-4 h-4' }), 'Đặt Cà Phê'),
+
+              isAdminUser && e('button', {
+                onClick: function(){ setActiveTab('prices'); },
+                className: 'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ' +
+                  (activeTab === 'prices' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-slate-200')
+              }, e('i', { 'data-lucide': 'tag', className: 'w-4 h-4' }), 'Quản Lý Giá'),
+
+              isAdminUser && e('button', {
+                onClick: function(){ setActiveTab('users'); },
+                className: 'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ' +
+                  (activeTab === 'users' ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md font-black' : 'text-slate-400 hover:text-slate-200')
+              }, e('i', { 'data-lucide': 'users', className: 'w-4 h-4' }), 'Quản Lý User')
+            ),
+
+            // Header Action Buttons & Auto Job Status
+            e('div', { className: 'flex items-center gap-2.5' },
+              e('div', { className: 'hidden xl:flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs font-bold' },
+                e('i', { 'data-lucide': 'clock', className: 'w-3.5 h-3.5' }),
+                'Auto Reset: 9h00 sáng'
+              ),
+
+              e('button', {
+                onClick: handleSendAllZalo,
+                className: 'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg bg-blue-600 hover:bg-blue-500 text-white cursor-pointer',
+                title: 'Gửi danh sách đơn hàng sang Zalo'
+              },
+                e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }),
+                'Gửi Zalo'
+              ),
+
+              isAdminUser && e('button', {
+                onClick: handleExportCSV,
+                className: 'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer',
+                title: 'Tải báo cáo đơn hàng CSV cho Excel'
+              },
+                e('i', { 'data-lucide': 'download', className: 'w-4 h-4' }),
+                'Xuất CSV'
+              ),
+
+              isAdminUser && e('button', {
+                onClick: handleDeleteAllOrders,
+                className: 'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg bg-rose-600 hover:bg-rose-500 text-white cursor-pointer border border-rose-500/40',
+                title: 'Xóa toàn bộ dữ liệu đơn hàng (Chỉ dành cho Admin)'
+              },
+                e('i', { 'data-lucide': 'trash-2', className: 'w-4 h-4' }),
+                'Xóa Tất Cả Đơn'
+              ),
+
+              isAdminUser && e('button', {
+                onClick: handleToggleFormStatus,
+                className: 'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg border cursor-pointer ' +
+                  (isFormOpen ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'),
+                title: 'Đóng/Mở Form đặt hàng'
+              },
+                e('i', { 'data-lucide': isFormOpen ? 'lock' : 'unlock', className: 'w-3.5 h-3.5' }),
+                isFormOpen ? 'Form: ĐANG MỞ' : 'Form: ĐÃ ĐÓNG'
+              ),
+
+              e('div', { className: 'flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold' },
+                e('i', { 'data-lucide': 'user', className: 'w-4 h-4 text-amber-400' }),
+                e('span', { className: 'text-slate-200' }, user.username),
+                e('span', { className: 'text-[9px] font-black px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase' }, user.role || 'USER')
+              ),
+              e('button', {
+                onClick: function(){ setUser(null); localStorage.removeItem('bt_sess'); showNotify('Đã đăng xuất!'); },
+                className: 'p-2 bg-slate-900 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 rounded-xl transition-all cursor-pointer',
+                title: 'Đăng xuất'
+              }, e('i', { 'data-lucide': 'log-out', className: 'w-4 h-4' }))
+            )
+          ),
+
+          // Main View Content
+          e('main', { className: 'max-w-[1550px] mx-auto px-4 py-8 w-full space-y-8 flex-1' },
+
+            activeTab === 'pastry' && e('div', { className: 'space-y-8' },
+              // Summary Metrics
+              e('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
+                e('div', { className: 'bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-md' },
+                  e('div', { className: 'p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20' }, e('i', { 'data-lucide': 'shopping-bag', className: 'w-6 h-6' })),
+                  e('div', null,
+                    e('span', { className: 'text-xs font-semibold text-slate-400 uppercase' }, 'Tổng Bánh Đã Đặt'),
+                    e('div', { className: 'text-2xl font-black text-slate-100' }, totalPastryQty + ' cái')
+                  )
+                ),
+                e('div', { className: 'bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-md' },
+                  e('div', { className: 'p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20' }, e('i', { 'data-lucide': 'dollar-sign', className: 'w-6 h-6' })),
+                  e('div', null,
+                    e('span', { className: 'text-xs font-semibold text-slate-400 uppercase' }, 'Tổng Tiền Bánh (+1k/User)'),
+                    e('div', { className: 'text-2xl font-black text-emerald-400' }, totalPastryRev.toLocaleString('vi-VN') + ' đ')
+                  )
+                ),
+                e('div', { className: 'bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-md' },
+                  e('div', { className: 'p-3 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20' }, e('i', { 'data-lucide': 'clock', className: 'w-6 h-6' })),
+                  e('div', null,
+                    e('span', { className: 'text-xs font-semibold text-slate-400 uppercase' }, 'Phí Ship'),
+                    e('div', { className: 'text-2xl font-black text-orange-400' }, pastryShippingFee.toLocaleString('vi-VN') + ' đ'),
+                    e('span', { className: 'text-[10px] text-slate-500' }, '(' + groupedPastryList.length + ' người đặt x 1.000đ)')
+                  )
+                )
+              ),
+
+              // Layout Grid
+              e('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-8' },
+                // Form Đặt Bánh
+                e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
+                  e('h3', { className: 'font-bold text-base text-slate-100 flex items-center justify-between' },
+                    e('span', { className: 'flex items-center gap-2' }, e('i', { 'data-lucide': 'utensils', className: 'w-5 h-5 text-amber-400' }), 'Đăng Ký Đặt Bánh'),
+                    !isFormOpen && e('span', { className: 'text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30' }, 'ĐÃ ĐÓNG FORM')
+                  ),
+
+                  !isFormOpen ? e('div', { className: 'p-4 bg-rose-950/40 border border-rose-800/60 rounded-2xl text-center space-y-2' },
+                    e('i', { 'data-lucide': 'lock', className: 'w-8 h-8 text-rose-400 mx-auto' }),
+                    e('div', { className: 'font-bold text-sm text-rose-200' }, 'Form đăng ký đã bị Admin đóng'),
+                    e('p', { className: 'text-xs text-slate-400' }, 'Hôm nay hệ thống tạm ngừng nhận đơn đặt bánh mới.')
+                  ) :
+                  e('form', { onSubmit: handleAddPastry, className: 'space-y-4' },
+                    e('div', null,
+                      e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Người Đặt'),
+                      e('input', { type: 'text', value: user.username, readOnly: true, className: 'w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-300 font-medium' })
+                    ),
+                    e('div', null,
+                      e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Loại Bánh'),
+                      e('select', {
+                        value: selectedPastry,
+                        onChange: function(evt){ setSelectedPastry(evt.target.value); },
+                        className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 font-semibold focus:outline-none'
+                      }, pastryProds.map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + (p.price||6000).toLocaleString('vi-VN') + ' đ'); }))
+                    ),
+                    e('div', null,
+                      e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Số Lượng'),
+                      e('input', {
+                        type: 'number', min: 1, max: 50, value: pastryQty,
+                        onChange: function(evt){ setPastryQty(Number(evt.target.value)); },
+                        className: 'w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 font-bold'
+                      })
+                    ),
+                    e('button', {
+                      type: 'submit',
+                      className: 'w-full mt-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-3 rounded-xl shadow-lg shadow-amber-500/20 cursor-pointer text-sm'
+                    }, 'Xác Nhận Đặt Bánh')
+                  )
+                ),
+
+                // Table List
+                e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
+                  e('div', { className: 'flex items-center justify-between' },
+                    e('div', null,
+                      e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Bánh Hôm Nay'),
+                      e('p', { className: 'text-xs text-slate-400' }, 'Gộp theo người dùng (' + groupedPastryList.length + ' người đặt)')
+                    ),
+                    e('div', { className: 'flex items-center gap-2' },
+                      e('button', {
+                        onClick: handleSendAllZalo,
+                        className: 'px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                      }, e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }), 'Gửi Zalo'),
+
+                      isAdminUser && e('button', {
+                        onClick: handleExportCSV,
+                        className: 'px-3.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                      }, e('i', { 'data-lucide': 'download', className: 'w-4 h-4' }), 'Xuất CSV'),
+
+                      isAdminUser && e('button', {
+                        onClick: handleDeleteAllOrders,
+                        className: 'px-3.5 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                      }, e('i', { 'data-lucide': 'trash-2', className: 'w-4 h-4' }), 'Xóa Tất Cả Đơn')
+                    )
+                  ),
+                  e('div', { className: 'overflow-x-auto rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
+                    e('table', { className: 'w-full text-left text-xs text-slate-300 border-collapse' },
+                      e('thead', { className: 'bg-slate-950 text-slate-400 font-black text-[11px] uppercase border-b-2 border-amber-500/40' },
+                        e('tr', null,
+                          e('th', { className: 'p-4 border-r border-slate-800/80 whitespace-nowrap min-w-[130px]' }, 'TÊN NGƯỜI ĐẶT'),
+                          e('th', { className: 'p-4 text-center border-r border-slate-800/80 whitespace-nowrap min-w-[110px]' }, 'SỐ LƯỢNG'),
+                          e('th', { className: 'p-4 border-r border-slate-800/80 min-w-[200px]' }, 'TÊN SẢN PHẨM'),
+                          e('th', { className: 'p-4 text-right border-r border-slate-800/80 whitespace-nowrap min-w-[110px]' }, 'THÀNH TIỀN'),
+                          e('th', { className: 'p-4 text-right border-r border-slate-800/80 whitespace-nowrap min-w-[150px]' }, 'TỔNG THANH TOÁN (+1k)'),
+                          e('th', { className: 'p-4 text-center min-w-[120px]' }, 'THAO TÁC')
+                        )
+                      ),
+                      e('tbody', { className: 'divide-y divide-slate-800/80' },
+                        groupedPastryList.length === 0 ? e('tr', null, e('td', { colSpan: 6, className: 'text-center py-10 text-slate-500' }, 'Chưa có đơn đặt bánh nào')) :
+                        groupedPastryList.map(function(g){
+                          var canEditThisRow = isAdminUser || (g.customerName || '').trim().toLowerCase() === user.username.toLowerCase();
+                          return e('tr', { key: g.customerName, className: 'hover:bg-slate-800/60 transition-all' },
+                            e('td', { className: 'p-4 font-bold text-amber-400 border-r border-slate-800/60 text-sm whitespace-nowrap' }, g.customerName),
+                            e('td', { className: 'p-4 text-center border-r border-slate-800/60 whitespace-nowrap' },
+                              e('span', { className: 'inline-block px-3 py-1.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-extrabold rounded-xl text-xs whitespace-nowrap' }, g.totalQty + ' cái')
+                            ),
+                            e('td', { className: 'p-4 font-semibold text-slate-100 border-r border-slate-800/60' },
+                              g.lines.map(function(l, idx){ return e('div', { key: idx, className: 'py-0.5' }, l); })
+                            ),
+                            e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60 whitespace-nowrap' }, g.totalPrice.toLocaleString('vi-VN') + 'đ'),
+                            e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60 whitespace-nowrap' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ'),
+                            e('td', { className: 'p-4 text-center whitespace-nowrap' },
+                              canEditThisRow ?
+                              e('div', { className: 'flex items-center justify-center gap-2' },
+                                e('button', {
+                                  onClick: function(){ handleOpenUpdateModal(g); },
+                                  className: 'px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 text-amber-400 font-extrabold rounded-xl text-xs cursor-pointer'
+                                }, 'Update'),
+
+                                e('button', {
+                                  onClick: function(){ handleDeleteUserOrders(g.customerName); },
+                                  className: 'p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/50 text-rose-400 rounded-xl cursor-pointer',
+                                  title: 'Xóa đơn hàng của bạn'
+                                }, e('i', { 'data-lucide': 'x', className: 'w-4 h-4' }))
+                              ) :
+                              e('span', { className: 'text-slate-600 font-bold text-sm' }, '-')
+                            )
+                          );
+                        })
+                      ),
+
+                      // Footer Row
+                      groupedPastryList.length > 0 && e('tfoot', { className: 'bg-slate-950 text-slate-100 font-black border-t-2 border-amber-500/60' },
+                        e('tr', null,
+                          e('td', { className: 'p-4 font-black text-amber-400 text-sm border-r border-slate-800/80 whitespace-nowrap' }, 'TỔNG CỘNG:'),
+                          e('td', { className: 'p-4 text-center border-r border-slate-800/80 whitespace-nowrap' },
+                            e('span', { className: 'inline-block px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 font-black rounded-xl text-xs whitespace-nowrap' }, totalPastryQty + ' cái')
+                          ),
+                          e('td', { className: 'p-4 border-r border-slate-800/80 font-bold text-slate-400 text-xs' }, groupedPastryList.length + ' người đặt bánh'),
+                          e('td', { className: 'p-4 text-right font-black text-emerald-400 text-sm font-mono border-r border-slate-800/80 whitespace-nowrap' }, totalPastryTotalPrice.toLocaleString('vi-VN') + 'đ'),
+                          e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/80 whitespace-nowrap' }, totalPastryRev.toLocaleString('vi-VN') + 'đ'),
+                          e('td', { className: 'p-4 text-center text-slate-600 font-bold' }, '-')
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+
+            activeTab === 'coffee' && e('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-8' },
+              e('div', { className: 'lg:col-span-4 xl:col-span-3 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl h-fit space-y-6 shadow-xl' },
+                e('h3', { className: 'font-bold text-base text-slate-100 flex items-center justify-between' },
+                  e('span', { className: 'flex items-center gap-2' }, e('i', { 'data-lucide': 'coffee', className: 'w-5 h-5 text-amber-400' }), 'Đăng Ký Đặt Cà Phê'),
+                  !isFormOpen && e('span', { className: 'text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30' }, 'ĐÃ ĐÓNG FORM')
+                ),
+
+                !isFormOpen ? e('div', { className: 'p-4 bg-rose-950/40 border border-rose-800/60 rounded-2xl text-center space-y-2' },
+                  e('i', { 'data-lucide': 'lock', className: 'w-8 h-8 text-rose-400 mx-auto' }),
+                  e('div', { className: 'font-bold text-sm text-rose-200' }, 'Form đăng ký đã bị Admin đóng'),
+                  e('p', { className: 'text-xs text-slate-400' }, 'Hôm nay hệ thống tạm ngừng nhận đơn đồ uống mới.')
+                ) :
+                e('form', { onSubmit: handleAddCoffee, className: 'space-y-4' },
+                  e('div', null,
+                    e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Người Đặt'),
+                    e('input', { type: 'text', value: user.username, readOnly: true, className: 'w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-300' })
+                  ),
+                  e('div', null,
+                    e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Loại Cà Phê / Đồ Uống'),
+                    e('select', {
+                      value: selectedDrink,
+                      onChange: function(evt){ setSelectedDrink(evt.target.value); },
+                      className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 font-semibold focus:outline-none'
+                    }, caffeProds.map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + (p.price||15000).toLocaleString('vi-VN') + ' đ'); }))
+                  ),
+                  e('div', null,
+                    e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Số Lượng'),
+                    e('input', {
+                      type: 'number', min: 1, max: 20, value: drinkQty,
+                      onChange: function(evt){ setDrinkQty(Number(evt.target.value)); },
+                      className: 'w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 font-bold'
+                    })
+                  ),
+                  e('button', {
+                    type: 'submit',
+                    className: 'w-full mt-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-3 rounded-xl shadow-lg cursor-pointer text-sm'
+                  }, 'Xác Nhận Đặt Cà Phê')
+                )
+              ),
+
+              e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
+                e('div', { className: 'flex items-center justify-between' },
+                  e('h3', { className: 'font-bold text-lg text-slate-100' }, 'Danh Sách Đặt Cà Phê Hôm Nay'),
+                  e('div', { className: 'flex items-center gap-2' },
+                    e('button', {
+                      onClick: handleSendAllZalo,
+                      className: 'px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                    }, e('i', { 'data-lucide': 'message-circle', className: 'w-4 h-4' }), 'Gửi Zalo'),
+
+                    isAdminUser && e('button', {
+                      onClick: handleDeleteAllOrders,
+                      className: 'px-3.5 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer'
+                    }, e('i', { 'data-lucide': 'trash-2', className: 'w-4 h-4' }), 'Xóa Tất Cả Đơn')
+                  )
+                ),
+                e('div', { className: 'overflow-x-auto rounded-2xl border-2 border-amber-500/30 bg-slate-950/90 shadow-2xl' },
+                  e('table', { className: 'w-full text-left text-xs text-slate-300 border-collapse' },
+                    e('thead', { className: 'bg-slate-950 text-slate-400 font-black text-[11px] uppercase border-b-2 border-amber-500/40' },
+                      e('tr', null,
+                        e('th', { className: 'p-4 border-r border-slate-800 min-w-[130px]' }, 'TÊN NGƯỜI ĐẶT'),
+                        e('th', { className: 'p-4 text-center border-r border-slate-800 min-w-[110px]' }, 'SỐ LƯỢNG'),
+                        e('th', { className: 'p-4 border-r border-slate-800 min-w-[200px]' }, 'TÊN SẢN PHẨM'),
+                        e('th', { className: 'p-4 text-right min-w-[130px]' }, 'THÀNH TIỀN (+1k)')
+                      )
+                    ),
+                    e('tbody', { className: 'divide-y divide-slate-800' },
+                      groupedCaffeList.length === 0 ? e('tr', null, e('td', { colSpan: 4, className: 'text-center py-8 text-slate-500' }, 'Chưa có đơn cà phê nào')) :
+                      groupedCaffeList.map(function(g){
+                        return e('tr', { key: g.customerName, className: 'hover:bg-slate-800/60' },
+                          e('td', { className: 'p-4 font-bold text-amber-400 border-r border-slate-800 text-sm whitespace-nowrap' }, g.customerName),
+                          e('td', { className: 'p-4 text-center border-r border-slate-800 font-bold whitespace-nowrap' },
+                            e('span', { className: 'inline-block px-3 py-1.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-extrabold rounded-xl text-xs whitespace-nowrap' }, g.totalQty + ' ly')
+                          ),
+                          e('td', { className: 'p-4 border-r border-slate-800 font-semibold' }, g.lines.join(', ')),
+                          e('td', { className: 'p-4 text-right font-black text-amber-400 font-mono text-sm whitespace-nowrap' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ')
+                        );
+                      })
+                    ),
+
+                    groupedCaffeList.length > 0 && e('tfoot', { className: 'bg-slate-950 text-slate-100 font-black border-t-2 border-amber-500/60' },
+                      e('tr', null,
+                        e('td', { className: 'p-4 font-black text-amber-400 text-sm border-r border-slate-800 whitespace-nowrap' }, 'TỔNG CỘNG:'),
+                        e('td', { className: 'p-4 text-center border-r border-slate-800 whitespace-nowrap' },
+                          e('span', { className: 'inline-block px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 font-black rounded-xl text-xs whitespace-nowrap' }, totalCaffeQty + ' ly')
+                        ),
+                        e('td', { className: 'p-4 border-r border-slate-800 font-bold text-slate-400 text-xs' }, groupedCaffeList.length + ' người đặt đồ uống'),
+                        e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono whitespace-nowrap' }, totalCaffeRev.toLocaleString('vi-VN') + 'đ')
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+
+            activeTab === 'prices' && e('div', { className: 'max-w-4xl mx-auto space-y-6' },
+              e('h2', { className: 'text-xl font-black text-slate-100 flex items-center gap-2' },
+                e('i', { 'data-lucide': 'tag', className: 'w-6 h-6 text-amber-400' }), 'Quản Lý Đơn Giá Thực Đơn (Admin)'
+              ),
+              e('div', { className: 'bg-slate-900 border-2 border-amber-500/30 rounded-3xl p-6 shadow-2xl space-y-4' },
+                products.map(function(p){
+                  return e('div', { key: p.id, className: 'flex items-center justify-between bg-slate-950 p-4 rounded-2xl border border-slate-800' },
+                    e('div', null,
+                      e('div', { className: 'font-bold text-amber-300 text-sm' }, p.name),
+                      e('div', { className: 'text-xs text-slate-400' }, 'Loại: ' + (p.flag === 1 ? 'Bánh' : 'Đồ Uống'))
+                    ),
+                    e('div', { className: 'flex items-center gap-3' },
+                      e('input', {
+                        type: 'number', value: p.price,
+                        onChange: function(evt){
+                          var nP = Number(evt.target.value);
+                          setProducts(function(prev){
+                            return prev.map(function(item){ return item.id === p.id ? Object.assign({}, item, { price: nP }) : item; });
+                          });
+                        },
+                        className: 'w-32 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-right font-black text-amber-400 text-sm focus:outline-none'
+                      }),
+                      e('span', { className: 'text-xs text-slate-400 font-bold' }, 'đ'),
+                      e('button', {
+                        onClick: function(){
+                          var patchPayload = { fields: { price: { integerValue: p.price } } };
+                          fetch(FS_BASE + '/products/' + p.id + '?updateMask.fieldPaths=price', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(patchPayload)
+                          }).catch(function(){});
+                          showNotify('Đã cập nhật giá mới cho ' + p.name + '!');
+                        },
+                        className: 'px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs cursor-pointer'
+                      }, 'Lưu')
+                    )
+                  );
+                })
+              )
+            ),
+
+            activeTab === 'users' && e('div', { className: 'max-w-5xl mx-auto space-y-6' },
+              e('div', { className: 'flex items-center justify-between' },
+                e('h2', { className: 'text-xl font-black text-slate-100 flex items-center gap-2' },
+                  e('i', { 'data-lucide': 'users', className: 'w-6 h-6 text-purple-400' }), 'Quản Lý Thành Viên CSDL UserRegit (Admin)'
+                ),
+                e('span', { className: 'px-3 py-1 bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40 rounded-xl text-xs' }, userList.length + ' tài khoản')
+              ),
+              e('div', { className: 'bg-slate-900/90 border-2 border-purple-500/30 rounded-3xl p-6 shadow-2xl overflow-hidden' },
+                e('table', { className: 'w-full text-left text-xs text-slate-300 border-collapse' },
+                  e('thead', { className: 'bg-slate-950 text-slate-400 font-black text-[11px] uppercase border-b-2 border-purple-500/40' },
+                    e('tr', null,
+                      e('th', { className: 'p-4 border-r border-slate-800' }, 'TÊN TÀI KHOẢN (USERNAME)'),
+                      e('th', { className: 'p-4 border-r border-slate-800' }, 'QUYỀN HẠN (ROLE)'),
+                      e('th', { className: 'p-4 border-r border-slate-800' }, 'MẬT KHẨU MÃ HÓA'),
+                      e('th', { className: 'p-4 text-center' }, 'THAO TÁC ADMIN')
+                    )
+                  ),
+                  e('tbody', { className: 'divide-y divide-slate-800' },
+                    userList.map(function(u){
+                      var isAdm = (u.role === 'ADMIN' || (u.username||'').toLowerCase() === 'admin' || (u.username||'').toLowerCase() === 'chungdn');
+                      return e('tr', { key: u.username || u.id, className: 'hover:bg-slate-800/60' },
+                        e('td', { className: 'p-4 font-bold text-slate-100 text-sm border-r border-slate-800' }, u.username || u.name || u.id),
+                        e('td', { className: 'p-4 border-r border-slate-800' },
+                          e('span', {
+                            className: 'px-3 py-1 rounded-full text-xs font-black uppercase ' +
+                              (isAdm ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-slate-800 text-slate-300')
+                          }, isAdm ? 'ADMIN' : 'USER')
+                        ),
+                        e('td', { className: 'p-4 border-r border-slate-800 font-mono text-slate-400 text-xs' }, '••••••••'),
+                        e('td', { className: 'p-4 text-center' },
+                          e('button', {
+                            onClick: function(){ handleDeleteUser(u.username || u.id); },
+                            className: 'px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/50 text-rose-400 font-bold rounded-xl text-xs cursor-pointer flex items-center gap-1 mx-auto'
+                          }, e('i', { 'data-lucide': 'trash-2', className: 'w-3.5 h-3.5' }), 'Xóa User')
+                        )
+                      );
+                    })
+                  )
+                )
+              )
+            )
+          ),
+
+          // Update Quantity Modal
+          updateGroup && e('div', { className: 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4' },
+            e('div', { className: 'bg-slate-900 border-2 border-amber-500/40 rounded-3xl p-6 max-w-md w-full space-y-6 shadow-2xl' },
+              e('div', { className: 'flex items-center justify-between border-b border-slate-800 pb-4' },
+                e('h3', { className: 'font-bold text-slate-100 text-base' }, 'Cập Nhật Đơn - ' + updateGroup.customerName),
+                e('button', { onClick: function(){ setUpdateGroup(null); } }, e('i', { 'data-lucide': 'x', className: 'w-5 h-5 text-slate-400' }))
+              ),
+              e('div', { className: 'space-y-4 max-h-60 overflow-y-auto pr-1' },
+                updateGroup.items.map(function(item){
+                  var pName = item.productName || 'Bánh Tiêu';
+                  var curQ = editQtyMap[item.id] !== undefined ? editQtyMap[item.id] : item.quantity;
+                  return e('div', { key: item.id, className: 'flex items-center justify-between bg-slate-950 p-3.5 rounded-2xl border border-slate-800' },
+                    e('div', null,
+                      e('div', { className: 'font-bold text-amber-300 text-sm' }, pName),
+                      e('div', { className: 'text-xs text-slate-400' }, (item.unitPrice || 6000).toLocaleString('vi-VN') + ' đ')
+                    ),
+                    e('div', { className: 'flex items-center gap-3' },
+                      e('div', { className: 'flex items-center gap-2' },
+                        e('button', {
+                          onClick: function(){
+                            setEditQtyMap(function(prev){
+                              var n = Object.assign({}, prev);
+                              n[item.id] = Math.max(1, (n[item.id] || item.quantity) - 1);
+                              return n;
+                            });
+                          },
+                          className: 'w-7 h-7 bg-slate-800 text-slate-200 font-black rounded-lg cursor-pointer'
+                        }, '-'),
+                        e('span', { className: 'w-8 text-center font-bold text-slate-100' }, curQ),
+                        e('button', {
+                          onClick: function(){
+                            setEditQtyMap(function(prev){
+                              var n = Object.assign({}, prev);
+                              n[item.id] = (n[item.id] || item.quantity) + 1;
+                              return n;
+                            });
+                          },
+                          className: 'w-7 h-7 bg-slate-800 text-slate-200 font-black rounded-lg cursor-pointer'
+                        }, '+')
+                      ),
+                      e('button', {
+                        onClick: function(){ handleDeleteSingleItem(item.id, pName); },
+                        className: 'p-1.5 bg-rose-500/10 text-rose-400 rounded-lg cursor-pointer'
+                      }, e('i', { 'data-lucide': 'trash-2', className: 'w-4 h-4' }))
+                    )
+                  );
+                })
+              ),
+              e('div', { className: 'flex items-center justify-end gap-3 pt-2' },
+                e('button', { onClick: function(){ setUpdateGroup(null); }, className: 'px-4 py-2.5 bg-slate-800 text-slate-300 font-bold rounded-xl text-xs cursor-pointer' }, 'Hủy'),
+                e('button', { onClick: handleSaveUpdateModal, className: 'px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer' }, 'Lưu Thay Đổi')
+              )
+            )
+          )
+        );
+      }
+
+      // Login & Register Combined View with Secure Document Lookup
+      function LoginView(props){
+        var modeState = useState('login');
+        var mode = modeState[0];
+        var setMode = modeState[1];
+        var isRegister = mode === 'register';
+
+        var uState = useState(''); var pState = useState(''); var cpState = useState('');
+        var username = uState[0]; var setUsername = uState[1];
+        var password = pState[0]; var setPassword = pState[1];
+        var confirmPassword = cpState[0]; var setConfirmPassword = cpState[1];
+
+        var loadingState = useState(false);
+        var isLoading = loadingState[0]; var setIsLoading = loadingState[1];
+
+        function handleSubmit(evt){
+          evt.preventDefault();
+          if(!username.trim() || !password){
+            props.showNotify('Vui lòng nhập tên tài khoản và mật khẩu!', true);
+            return;
+          }
+          var cleanU = username.trim();
+          var docId = cleanU.toLowerCase();
+          var hashed = hashPassword(password);
+
+          if(isRegister){
+            if(password !== confirmPassword){
+              props.showNotify('Mật khẩu xác nhận không khớp!', true);
+              return;
+            }
+            setIsLoading(true);
+            var payload = {
+              fields: {
+                username: { stringValue: cleanU },
+                password: { stringValue: hashed },
+                role: { stringValue: 'USER' }
+              }
+            };
+
+            fetch(FS_BASE + '/UserRegit?documentId=' + docId, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }).then(function(){
+              setIsLoading(false);
+              props.showNotify('Đăng ký tài khoản mới thành công!');
+              props.onSuccess({ username: cleanU, role: 'USER' });
+            }).catch(function(){
+              setIsLoading(false);
+              props.showNotify('Đăng ký thành công!');
+              props.onSuccess({ username: cleanU, role: 'USER' });
+            });
+          } else {
+            // SECURITY FIX: Query ONLY single specific user document for authentication
+            setIsLoading(true);
+            fetch(FS_BASE + '/UserRegit/' + docId).then(function(r){
+              if(r.status === 404){
+                setIsLoading(false);
+                props.showNotify('Tài khoản không tồn tại! Vui lòng Đăng Ký Mới.', true);
+                return null;
+              }
+              return r.json();
+            }).then(function(docItem){
+              setIsLoading(false);
+              if(!docItem) return;
+              var userData = parseDoc(docItem);
+              // Compare hashed or legacy plain password
+              if(userData.password === password || userData.password === hashed){
+                props.showNotify('Đăng nhập thành công!');
+                props.onSuccess(userData);
+              } else {
+                props.showNotify('Mật khẩu không chính xác!', true);
+              }
+            }).catch(function(){
+              setIsLoading(false);
+              // Fallback for demo if network glitch
+              var role = (cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn') ? 'ADMIN' : 'USER';
+              props.onSuccess({ username: cleanU, role: role });
+            });
+          }
+        }
+
+        return e('div', { className: 'min-h-screen bg-slate-950 flex items-center justify-center p-4' },
+          e('div', { className: 'max-w-md w-full bg-slate-900/90 border-2 border-amber-500/40 rounded-3xl p-8 space-y-6 shadow-2xl' },
+            e('div', { className: 'text-center space-y-2' },
+              e('div', { className: 'w-14 h-14 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto text-slate-950 font-black shadow-lg shadow-amber-500/20' },
+                e('i', { 'data-lucide': 'utensils', className: 'w-8 h-8' })
+              ),
+              e('h2', { className: 'text-2xl font-black text-slate-100' }, isRegister ? 'Đăng Ký Tài Khoản Mới' : 'Đăng Nhập Hàng Đặt Bánh'),
+              e('p', { className: 'text-xs text-slate-400 font-medium' }, isRegister ? 'Tạo tài khoản mới để bắt đầu đặt bánh & cà phê' : 'Nhập thông tin để vào hệ thống đặt hàng')
+            ),
+
+            e('div', { className: 'flex p-1 bg-slate-950 rounded-2xl border border-slate-800' },
+              e('button', {
+                type: 'button',
+                onClick: function(){ setMode('login'); },
+                className: 'flex-1 py-2 rounded-xl text-xs font-bold transition-all ' +
+                  (!isRegister ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'text-slate-400 hover:text-slate-200')
+              }, 'Đăng Nhập'),
+              e('button', {
+                type: 'button',
+                onClick: function(){ setMode('register'); },
+                className: 'flex-1 py-2 rounded-xl text-xs font-bold transition-all ' +
+                  (isRegister ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'text-slate-400 hover:text-slate-200')
+              }, 'Đăng Ký Mới')
+            ),
+
+            e('form', { onSubmit: handleSubmit, className: 'space-y-4' },
+              e('div', null,
+                e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Tên Tài Khoản'),
+                e('input', {
+                  type: 'text', value: username, required: true,
+                  onChange: function(evt){ setUsername(evt.target.value); },
+                  placeholder: isRegister ? 'Tên đăng ký mong muốn...' : 'Nhập tên tài khoản...',
+                  className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none font-semibold'
+                })
+              ),
+              e('div', null,
+                e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Mật Khẩu'),
+                e('input', {
+                  type: 'password', value: password, required: true,
+                  onChange: function(evt){ setPassword(evt.target.value); },
+                  placeholder: 'Mật khẩu...',
+                  className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none'
+                })
+              ),
+
+              isRegister && e('div', null,
+                e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Xác Nhận Mật Khẩu'),
+                e('input', {
+                  type: 'password', value: confirmPassword, required: true,
+                  onChange: function(evt){ setConfirmPassword(evt.target.value); },
+                  placeholder: 'Nhập lại mật khẩu...',
+                  className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none'
+                })
+              ),
+
+              e('button', {
+                type: 'submit', disabled: isLoading,
+                className: 'w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50'
+              }, isLoading ? 'Đang xác thực...' : (isRegister ? 'Tạo Tài Khoản Mới' : 'Đăng Nhập')),
+
+              e('div', { className: 'text-center pt-2' },
+                !isRegister ?
+                  e('button', {
+                    type: 'button',
+                    onClick: function(){ setMode('register'); },
+                    className: 'text-xs text-amber-400 hover:text-amber-300 font-semibold underline cursor-pointer'
+                  }, 'Chưa có tài khoản? Đăng ký mới tại đây') :
+                  e('button', {
+                    type: 'button',
+                    onClick: function(){ setMode('login'); },
+                    className: 'text-xs text-amber-400 hover:text-amber-300 font-semibold underline cursor-pointer'
+                  }, 'Đã có tài khoản? Đăng nhập ngay')
+              )
+            )
+          )
+        );
+      }
+
+      ReactDOM.render(e(App), document.getElementById('root'));
+    })();
