@@ -44,6 +44,17 @@
       var useState = React.useState;
       var useEffect = React.useEffect;
 
+      // Danh mục sản phẩm mặc định chuẩn hệ thống
+      var INITIAL_PRODUCTS = [
+        { id: 'p1', name: 'Bánh Tiêu', price: 6000, category: 'Bánh Tiêu', flag: 1 },
+        { id: 'p2', name: 'Bánh Chuối Chiên', price: 8000, category: 'Bánh Chuối', flag: 1 },
+        { id: 'p3', name: 'Bánh Bao Chiên', price: 10000, category: 'Bánh Bao', flag: 1 },
+        { id: 'c1', name: 'Cà Phê Đen', price: 15000, category: 'Đồ Uống', flag: 2 },
+        { id: 'c2', name: 'Cà Phê Sữa', price: 18000, category: 'Đồ Uống', flag: 2 },
+        { id: 'c3', name: 'Bạc Xỉu', price: 20000, category: 'Đồ Uống', flag: 2 },
+        { id: 'c4', name: 'Trà Đào Cam Sả', price: 25000, category: 'Đồ Uống', flag: 2 }
+      ];
+
       function App(){
         var authState = useState(function(){
           var s = localStorage.getItem('bt_sess');
@@ -56,15 +67,29 @@
         var activeTab = tabState[0];
         var setActiveTab = tabState[1];
 
-        var ordState = useState([]);
+        var ordState = useState(function(){
+          var saved = localStorage.getItem('bt_ords');
+          return saved ? JSON.parse(saved) : [];
+        });
         var orders = ordState[0];
         var setOrders = ordState[1];
 
-        var prodState = useState([]);
+        var prodState = useState(function(){
+          var saved = localStorage.getItem('bt_prods');
+          return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+        });
         var products = prodState[0];
         var setProducts = prodState[1];
 
-        var userListState = useState([]);
+        var userListState = useState(function(){
+          var saved = localStorage.getItem('bt_users');
+          return saved ? JSON.parse(saved) : [
+            { username: 'admin', role: 'ADMIN', password: 'admin123' },
+            { username: 'ChungDN', role: 'ADMIN', password: '123' },
+            { username: 'ThaoTP39', role: 'USER', password: '123' },
+            { username: 'Châu', role: 'USER', password: '123' }
+          ];
+        });
         var userList = userListState[0];
         var setUserList = userListState[1];
 
@@ -81,13 +106,13 @@
         var setNotification = notifyState[1];
 
         // Pastry Form State
-        var selPastryState = useState('');
+        var selPastryState = useState('Bánh Tiêu');
         var selectedPastry = selPastryState[0]; var setSelectedPastry = selPastryState[1];
         var pastryQtyState = useState(1);
         var pastryQty = pastryQtyState[0]; var setPastryQty = pastryQtyState[1];
 
         // Coffee Form State
-        var selDrinkState = useState('');
+        var selDrinkState = useState('Cà Phê Đen');
         var selectedDrink = selDrinkState[0]; var setSelectedDrink = selDrinkState[1];
         var drinkQtyState = useState(1);
         var drinkQty = drinkQtyState[0]; var setDrinkQty = drinkQtyState[1];
@@ -103,53 +128,38 @@
           setTimeout(function(){ setNotification(null); }, 3500);
         }
 
+        // Tải dữ liệu từ backend API nếu có
         function loadBackendData(){
           fetch('/api/products').then(function(r){ return r.json(); }).then(function(data){
             if(data && Array.isArray(data.products) && data.products.length > 0){
               setProducts(data.products);
-              var pastries = data.products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
-              if(pastries.length > 0) setSelectedPastry(pastries[0].name);
-
-              var drinks = data.products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
-              if(drinks.length > 0) setSelectedDrink(drinks[0].name);
-            } else {
-              var defaultProds = [
-                { id: 'p1', name: 'Bánh Tiêu', price: 6000, category: 'Bánh Tiêu', flag: 1 },
-                { id: 'p2', name: 'Bánh Chuối Chiên', price: 8000, category: 'Bánh Chuối', flag: 1 },
-                { id: 'p3', name: 'Bánh Bao Chiên', price: 10000, category: 'Bánh Bao', flag: 1 },
-                { id: 'c1', name: 'Cà Phê Đen', price: 15000, category: 'Đồ Uống', flag: 2 },
-                { id: 'c2', name: 'Cà Phê Sữa', price: 18000, category: 'Đồ Uống', flag: 2 },
-                { id: 'c3', name: 'Bạc Xỉu', price: 20000, category: 'Đồ Uống', flag: 2 },
-                { id: 'c4', name: 'Trà Đào Cam Sả', price: 25000, category: 'Đồ Uống', flag: 2 }
-              ];
-              setProducts(defaultProds);
-              setSelectedPastry('Bánh Tiêu');
-              setSelectedDrink('Cà Phê Đen');
+              localStorage.setItem('bt_prods', JSON.stringify(data.products));
             }
           }).catch(function(){});
 
           fetch('/api/orders').then(function(r){ return r.json(); }).then(function(data){
-            if(data && Array.isArray(data.orders)) setOrders(data.orders);
+            if(data && Array.isArray(data.orders)){
+              setOrders(data.orders);
+              localStorage.setItem('bt_ords', JSON.stringify(data.orders));
+            }
           }).catch(function(){});
         }
 
-        // Tải danh sách User cho Admin
-        function loadUsersData(){
-          var sampleUsers = [
-            { username: 'admin', role: 'ADMIN', password: 'admin123' },
-            { username: 'ChungDN', role: 'ADMIN', password: '123' },
-            { username: 'ThaoTP39', role: 'USER', password: '123' },
-            { username: 'Châu', role: 'USER', password: '123' }
-          ];
-          setUserList(sampleUsers);
-        }
+        useEffect(function(){
+          if(user) loadBackendData();
+        }, [user]);
 
         useEffect(function(){
-          if(user){
-            loadBackendData();
-            loadUsersData();
-          }
-        }, [user]);
+          localStorage.setItem('bt_ords', JSON.stringify(orders));
+        }, [orders]);
+
+        useEffect(function(){
+          localStorage.setItem('bt_prods', JSON.stringify(products));
+        }, [products]);
+
+        useEffect(function(){
+          localStorage.setItem('bt_users', JSON.stringify(userList));
+        }, [userList]);
 
         useEffect(function(){
           if(window.lucide) window.lucide.createIcons();
@@ -157,6 +167,7 @@
 
         if(!user){
           return e(LoginView, {
+            userList: userList,
             onSuccess: function(u){
               setUser(u);
               localStorage.setItem('bt_sess', JSON.stringify(u));
@@ -213,7 +224,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(nOrd)
-          }).then(function(){ loadBackendData(); }).catch(function(){});
+          }).catch(function(){});
 
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt bánh cho ' + user.username + '!');
@@ -248,7 +259,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(nOrd)
-          }).then(function(){ loadBackendData(); }).catch(function(){});
+          }).catch(function(){});
 
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt cà phê cho ' + user.username + '!');
@@ -377,7 +388,10 @@
         var pastryShippingFee = groupedPastryList.length * 1000;
 
         var pastryProds = products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
+        if(pastryProds.length === 0) pastryProds = INITIAL_PRODUCTS.filter(function(p){ return p.flag === 1; });
+
         var caffeProds = products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
+        if(caffeProds.length === 0) caffeProds = INITIAL_PRODUCTS.filter(function(p){ return p.flag === 2; });
 
         var isAdminUser = (user.role === 'ADMIN' || (user.role||'').toUpperCase() === 'ADMIN' || user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'chungdn');
 
@@ -427,10 +441,9 @@
 
             // User Info, Form Toggle, Logout
             e('div', { className: 'flex items-center gap-3' },
-              // Admin Nút Đóng / Mở Form
               isAdminUser && e('button', {
                 onClick: handleToggleFormStatus,
-                className: 'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg border ' +
+                className: 'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg border cursor-pointer ' +
                   (isFormOpen ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'),
                 title: 'Đóng/Mở Form đặt hàng'
               },
@@ -445,7 +458,7 @@
               ),
               e('button', {
                 onClick: function(){ setUser(null); localStorage.removeItem('bt_sess'); showNotify('Đã đăng xuất!'); },
-                className: 'p-2 bg-slate-900 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 rounded-xl transition-all',
+                className: 'p-2 bg-slate-900 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 rounded-xl transition-all cursor-pointer',
                 title: 'Đăng xuất'
               }, e('i', { 'data-lucide': 'log-out', className: 'w-4 h-4' }))
             )
@@ -506,7 +519,7 @@
                         value: selectedPastry,
                         onChange: function(evt){ setSelectedPastry(evt.target.value); },
                         className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 font-semibold focus:outline-none'
-                      }, (pastryProds.length > 0 ? pastryProds : products).map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + (p.price||6000).toLocaleString('vi-VN') + ' đ'); }))
+                      }, pastryProds.map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + (p.price||6000).toLocaleString('vi-VN') + ' đ'); }))
                     ),
                     e('div', null,
                       e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Số Lượng'),
@@ -598,7 +611,7 @@
                       value: selectedDrink,
                       onChange: function(evt){ setSelectedDrink(evt.target.value); },
                       className: 'w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 font-semibold focus:outline-none'
-                    }, (caffeProds.length > 0 ? caffeProds : products).map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + (p.price||15000).toLocaleString('vi-VN') + ' đ'); }))
+                    }, caffeProds.map(function(p){ return e('option', { key: p.id, value: p.name }, p.name + ' - ' + (p.price||15000).toLocaleString('vi-VN') + ' đ'); }))
                   ),
                   e('div', null,
                     e('label', { className: 'block text-xs font-semibold text-slate-400 mb-1' }, 'Số Lượng'),
@@ -795,7 +808,9 @@
             return;
           }
           var cleanU = username.trim();
-          var role = (cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn') ? 'ADMIN' : 'USER';
+          var matchU = (props.userList || []).find(function(u){ return u.username.toLowerCase() === cleanU.toLowerCase(); });
+          var role = matchU ? matchU.role : ((cleanU.toLowerCase() === 'admin' || cleanU.toLowerCase() === 'chungdn') ? 'ADMIN' : 'USER');
+
           props.onSuccess({
             username: cleanU,
             role: role,
