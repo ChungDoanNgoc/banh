@@ -44,6 +44,22 @@
       var useState = React.useState;
       var useEffect = React.useEffect;
 
+      var FS_BASE = "https://firestore.googleapis.com/v1/projects/banhtieufpt/databases/(default)/documents";
+
+      // Parse Firestore REST API Document Format
+      function parseDoc(docItem){
+        var fields = docItem.fields || {};
+        var res = { id: docItem.name ? docItem.name.split('/').pop() : '' };
+        Object.keys(fields).forEach(function(k){
+          var v = fields[k];
+          if(v.stringValue !== undefined) res[k] = v.stringValue;
+          else if(v.integerValue !== undefined) res[k] = Number(v.integerValue);
+          else if(v.doubleValue !== undefined) res[k] = Number(v.doubleValue);
+          else if(v.booleanValue !== undefined) res[k] = v.booleanValue;
+        });
+        return res;
+      }
+
       function App(){
         var authState = useState(function(){
           var s = localStorage.getItem('bt_sess');
@@ -56,7 +72,6 @@
         var activeTab = tabState[0];
         var setActiveTab = tabState[1];
 
-        // Zero hardcoded arrays - 100% dynamic load from DB
         var ordState = useState([]);
         var orders = ordState[0];
         var setOrders = ordState[1];
@@ -104,30 +119,40 @@
           setTimeout(function(){ setNotification(null); }, 3500);
         }
 
-        // Tải dữ liệu 100% ĐỘNG từ CSDL / Backend API
-        function loadBackendData(){
-          fetch('/api/products').then(function(r){ return r.json(); }).then(function(data){
-            if(data && Array.isArray(data.products) && data.products.length > 0){
-              setProducts(data.products);
-              var pastries = data.products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
-              if(pastries.length > 0 && !selectedPastry) setSelectedPastry(pastries[0].name);
+        // Tải 100% ĐỘNG trực tiếp từ Firestore REST API
+        function loadFirestoreData(){
+          // 1. Fetch Products
+          fetch(FS_BASE + '/products').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.documents)){
+              var parsed = data.documents.map(parseDoc);
+              setProducts(parsed);
+              var pastries = parsed.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
+              if(pastries.length > 0) setSelectedPastry(pastries[0].name);
 
-              var drinks = data.products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
-              if(drinks.length > 0 && !selectedDrink) setSelectedDrink(drinks[0].name);
+              var drinks = parsed.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
+              if(drinks.length > 0) setSelectedDrink(drinks[0].name);
             }
           }).catch(function(){});
 
-          fetch('/api/orders').then(function(r){ return r.json(); }).then(function(data){
-            if(data && Array.isArray(data.orders)) setOrders(data.orders);
+          // 2. Fetch Orders
+          fetch(FS_BASE + '/orders').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.documents)){
+              var parsedOrds = data.documents.map(parseDoc);
+              setOrders(parsedOrds);
+            }
           }).catch(function(){});
 
-          fetch('/api/users').then(function(r){ return r.json(); }).then(function(data){
-            if(Array.isArray(data)) setUserList(data);
+          // 3. Fetch Users
+          fetch(FS_BASE + '/UserRegit').then(function(r){ return r.json(); }).then(function(data){
+            if(data && Array.isArray(data.documents)){
+              var parsedUsers = data.documents.map(parseDoc);
+              setUserList(parsedUsers);
+            }
           }).catch(function(){});
         }
 
         useEffect(function(){
-          if(user) loadBackendData();
+          if(user) loadFirestoreData();
         }, [user]);
 
         useEffect(function(){
@@ -153,19 +178,20 @@
           showNotify(nState ? 'Đã MỞ Form đăng ký đặt hàng!' : 'Đã ĐÓNG Form đăng ký đặt hàng!', !nState);
         }
 
-        // Admin Xóa User
+        // Admin Xóa User khỏi Firestore REST API
         function handleDeleteUser(uName){
           if(uName === user.username){
             showNotify('Không thể tự xóa tài khoản đang đăng nhập!', true);
             return;
           }
-          if(!confirm('Xác nhận xóa vĩnh viễn tài khoản "' + uName + '"?')) return;
-          fetch('/api/users/' + encodeURIComponent(uName), { method: 'DELETE' }).catch(function(){});
+          if(!confirm('Xác nhận xóa vĩnh viễn tài khoản "' + uName + '" khỏi Firestore?')) return;
+          var docId = uName.trim().toLowerCase();
+          fetch(FS_BASE + '/UserRegit/' + docId, { method: 'DELETE' }).catch(function(){});
           setUserList(function(prev){ return prev.filter(function(u){ return u.username !== uName; }); });
           showNotify('Đã xóa thành công tài khoản ' + uName);
         }
 
-        // Add Pastry Order
+        // Add Pastry Order qua Firestore REST API
         function handleAddPastry(evt){
           evt.preventDefault();
           if(!isFormOpen){
@@ -178,8 +204,9 @@
           }
           var pMatch = products.find(function(p){ return p.name === selectedPastry; });
           var uPrice = pMatch ? pMatch.price : 6000;
+          var ordId = 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2,5);
           var nOrd = {
-            id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2,5),
+            id: ordId,
             customerName: user.username,
             category: 'pastry',
             productName: selectedPastry,
@@ -189,18 +216,32 @@
             createdAt: new Date().toISOString()
           };
 
-          fetch('/api/orders', {
+          // Firestore REST API Create Document
+          var payload = {
+            fields: {
+              id: { stringValue: ordId },
+              customerName: { stringValue: user.username },
+              category: { stringValue: 'pastry' },
+              productName: { stringValue: selectedPastry },
+              quantity: { integerValue: pastryQty },
+              unitPrice: { integerValue: uPrice },
+              totalPrice: { integerValue: pastryQty * uPrice },
+              createdAt: { stringValue: nOrd.createdAt }
+            }
+          };
+
+          fetch(FS_BASE + '/orders?documentId=' + ordId, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nOrd)
-          }).then(function(){ loadBackendData(); }).catch(function(){});
+            body: JSON.stringify(payload)
+          }).then(function(){ loadFirestoreData(); }).catch(function(){});
 
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt bánh cho ' + user.username + '!');
           setPastryQty(1);
         }
 
-        // Add Beverage Order
+        // Add Beverage Order qua Firestore REST API
         function handleAddCoffee(evt){
           evt.preventDefault();
           if(!isFormOpen){
@@ -213,8 +254,9 @@
           }
           var pMatch = products.find(function(p){ return p.name === selectedDrink; });
           var uPrice = pMatch ? pMatch.price : 15000;
+          var ordId = 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2,5);
           var nOrd = {
-            id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2,5),
+            id: ordId,
             customerName: user.username,
             category: 'beverage',
             productName: selectedDrink,
@@ -224,11 +266,24 @@
             createdAt: new Date().toISOString()
           };
 
-          fetch('/api/orders', {
+          var payload = {
+            fields: {
+              id: { stringValue: ordId },
+              customerName: { stringValue: user.username },
+              category: { stringValue: 'beverage' },
+              productName: { stringValue: selectedDrink },
+              quantity: { integerValue: drinkQty },
+              unitPrice: { integerValue: uPrice },
+              totalPrice: { integerValue: drinkQty * uPrice },
+              createdAt: { stringValue: nOrd.createdAt }
+            }
+          };
+
+          fetch(FS_BASE + '/orders?documentId=' + ordId, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nOrd)
-          }).then(function(){ loadBackendData(); }).catch(function(){});
+            body: JSON.stringify(payload)
+          }).then(function(){ loadFirestoreData(); }).catch(function(){});
 
           setOrders(function(prev){ return [nOrd].concat(prev); });
           showNotify('Đã thêm đơn đặt cà phê cho ' + user.username + '!');
@@ -238,7 +293,10 @@
         // Delete User Order Group
         function handleDeleteUserOrders(cName){
           if(!confirm('Bạn có chắc muốn xóa tất cả đơn của ' + cName + '?')) return;
-          fetch('/api/orders?customerName=' + encodeURIComponent(cName), { method: 'DELETE' }).catch(function(){});
+          var toDelete = orders.filter(function(o){ return (o.customerName || '').trim() === cName; });
+          toDelete.forEach(function(o){
+            fetch(FS_BASE + '/orders/' + o.id, { method: 'DELETE' }).catch(function(){});
+          });
           setOrders(function(prev){
             return prev.filter(function(o){ return (o.customerName || '').trim() !== cName; });
           });
@@ -253,16 +311,23 @@
           setUpdateGroup(group);
         }
 
-        // Save Update Modal
+        // Save Update Modal qua Firestore REST API
         function handleSaveUpdateModal(){
           if(!updateGroup) return;
           updateGroup.items.forEach(function(item){
             if(editQtyMap[item.id] !== undefined){
               var nQ = editQtyMap[item.id];
-              fetch('/api/orders/' + item.id, {
-                method: 'PUT',
+              var nTotal = nQ * item.unitPrice;
+              var patchPayload = {
+                fields: {
+                  quantity: { integerValue: nQ },
+                  totalPrice: { integerValue: nTotal }
+                }
+              };
+              fetch(FS_BASE + '/orders/' + item.id + '?updateMask.fieldPaths=quantity&updateMask.fieldPaths=totalPrice', {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quantity: nQ, totalPrice: nQ * item.unitPrice })
+                body: JSON.stringify(patchPayload)
               }).catch(function(){});
             }
           });
@@ -282,7 +347,7 @@
         // Delete Single Item inside Modal
         function handleDeleteSingleItem(itemId, pName){
           if(!confirm('Xóa món "' + pName + '" khỏi đơn hàng?')) return;
-          fetch('/api/orders/' + itemId, { method: 'DELETE' }).catch(function(){});
+          fetch(FS_BASE + '/orders/' + itemId, { method: 'DELETE' }).catch(function(){});
           setOrders(function(prev){ return prev.filter(function(o){ return o.id !== itemId; }); });
           showNotify('Đã xóa món ' + pName);
           setUpdateGroup(null);
@@ -647,10 +712,11 @@
                       e('span', { className: 'text-xs text-slate-400 font-bold' }, 'đ'),
                       e('button', {
                         onClick: function(){
-                          fetch('/api/products/' + p.id, {
-                            method: 'PUT',
+                          var patchPayload = { fields: { price: { integerValue: p.price } } };
+                          fetch(FS_BASE + '/products/' + p.id + '?updateMask.fieldPaths=price', {
+                            method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ price: p.price })
+                            body: JSON.stringify(patchPayload)
                           }).catch(function(){});
                           showNotify('Đã cập nhật giá mới cho ' + p.name + '!');
                         },
@@ -681,9 +747,9 @@
                   ),
                   e('tbody', { className: 'divide-y divide-slate-800' },
                     userList.map(function(u){
-                      var isAdm = (u.role === 'ADMIN' || u.username.toLowerCase() === 'admin' || u.username.toLowerCase() === 'chungdn');
-                      return e('tr', { key: u.username, className: 'hover:bg-slate-800/60' },
-                        e('td', { className: 'p-4 font-bold text-slate-100 text-sm border-r border-slate-800' }, u.username),
+                      var isAdm = (u.role === 'ADMIN' || (u.username||'').toLowerCase() === 'admin' || (u.username||'').toLowerCase() === 'chungdn');
+                      return e('tr', { key: u.username || u.id, className: 'hover:bg-slate-800/60' },
+                        e('td', { className: 'p-4 font-bold text-slate-100 text-sm border-r border-slate-800' }, u.username || u.name || u.id),
                         e('td', { className: 'p-4 border-r border-slate-800' },
                           e('span', {
                             className: 'px-3 py-1 rounded-full text-xs font-black uppercase ' +
@@ -693,7 +759,7 @@
                         e('td', { className: 'p-4 border-r border-slate-800 font-mono text-slate-300 text-xs' }, u.password || '******'),
                         e('td', { className: 'p-4 text-center' },
                           e('button', {
-                            onClick: function(){ handleDeleteUser(u.username); },
+                            onClick: function(){ handleDeleteUser(u.username || u.id); },
                             className: 'px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/50 text-rose-400 font-bold rounded-xl text-xs cursor-pointer flex items-center gap-1 mx-auto'
                           }, e('i', { 'data-lucide': 'trash-2', className: 'w-3.5 h-3.5' }), 'Xóa User')
                         )
