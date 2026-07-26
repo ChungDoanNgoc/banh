@@ -164,6 +164,8 @@
           });
         }
 
+        var isAdminUser = (user.role === 'ADMIN' || (user.role||'').toUpperCase() === 'ADMIN' || user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'chungdn');
+
         function handleToggleFormStatus(){
           var nState = !isFormOpen;
           setIsFormOpen(nState);
@@ -281,8 +283,12 @@
           setDrinkQty(1);
         }
 
-        // Delete User Order Group
+        // Delete User Order Group - Check Owner / Admin Permission
         function handleDeleteUserOrders(cName){
+          if(!isAdminUser && (cName||'').trim().toLowerCase() !== user.username.toLowerCase()){
+            showNotify('Bạn chỉ có quyền xóa đơn hàng của chính mình!', true);
+            return;
+          }
           if(!confirm('Bạn có chắc muốn xóa tất cả đơn của ' + cName + '?')) return;
           var toDelete = orders.filter(function(o){ return (o.customerName || '').trim() === cName; });
           toDelete.forEach(function(o){
@@ -294,8 +300,12 @@
           showNotify('Đã xóa đơn hàng của ' + cName);
         }
 
-        // Open Update Modal
+        // Open Update Modal - Check Owner / Admin Permission
         function handleOpenUpdateModal(group){
+          if(!isAdminUser && (group.customerName||'').trim().toLowerCase() !== user.username.toLowerCase()){
+            showNotify('Bạn chỉ có quyền sửa đơn hàng của chính mình!', true);
+            return;
+          }
           var qMap = {};
           group.items.forEach(function(i){ qMap[i.id] = i.quantity; });
           setEditQtyMap(qMap);
@@ -474,8 +484,6 @@
         var pastryProds = products.filter(function(p){ return p.flag === 1 || (p.name||'').indexOf('Bánh')>=0; });
         var caffeProds = products.filter(function(p){ return p.flag === 2 || (p.name||'').indexOf('Bánh')<0; });
 
-        var isAdminUser = (user.role === 'ADMIN' || (user.role||'').toUpperCase() === 'ADMIN' || user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'chungdn');
-
         return e('div', { className: 'min-h-screen flex flex-col bg-slate-950' },
           notification && e('div', {
             className: 'fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl border shadow-2xl font-bold text-sm flex items-center gap-2 ' +
@@ -635,7 +643,7 @@
                   )
                 ),
 
-                // Table List with Summary Footer Row (TỔNG CỘNG)
+                // Table List
                 e('div', { className: 'lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-2xl' },
                   e('div', { className: 'flex items-center justify-between' },
                     e('div', null,
@@ -669,6 +677,7 @@
                       e('tbody', { className: 'divide-y divide-slate-800/80' },
                         groupedPastryList.length === 0 ? e('tr', null, e('td', { colSpan: 6, className: 'text-center py-10 text-slate-500' }, 'Chưa có đơn đặt bánh nào')) :
                         groupedPastryList.map(function(g){
+                          var canEditThisRow = isAdminUser || (g.customerName || '').trim().toLowerCase() === user.username.toLowerCase();
                           return e('tr', { key: g.customerName, className: 'hover:bg-slate-800/60 transition-all' },
                             e('td', { className: 'p-4 font-bold text-amber-400 border-r border-slate-800/60 text-sm whitespace-nowrap' }, g.customerName),
                             e('td', { className: 'p-4 text-center border-r border-slate-800/60 whitespace-nowrap' },
@@ -680,6 +689,7 @@
                             e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60 whitespace-nowrap' }, g.totalPrice.toLocaleString('vi-VN') + 'đ'),
                             e('td', { className: 'p-4 text-right font-black text-amber-400 text-sm font-mono border-r border-slate-800/60 whitespace-nowrap' }, g.finalTotalPrice.toLocaleString('vi-VN') + 'đ'),
                             e('td', { className: 'p-4 text-center whitespace-nowrap' },
+                              canEditThisRow ?
                               e('div', { className: 'flex items-center justify-center gap-2' },
                                 e('button', {
                                   onClick: function(){ handleOpenUpdateModal(g); },
@@ -688,15 +698,17 @@
 
                                 e('button', {
                                   onClick: function(){ handleDeleteUserOrders(g.customerName); },
-                                  className: 'p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/50 text-rose-400 rounded-xl cursor-pointer'
+                                  className: 'p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/50 text-rose-400 rounded-xl cursor-pointer',
+                                  title: 'Xóa đơn hàng của bạn'
                                 }, e('i', { 'data-lucide': 'x', className: 'w-4 h-4' }))
-                              )
+                              ) :
+                              e('span', { className: 'text-slate-600 font-bold text-sm' }, '-')
                             )
                           );
                         })
                       ),
 
-                      // Footer Row: TỔNG CỘNG THÀNH TIỀN VÀ TỔNG THANH TOÁN
+                      // Footer Row
                       groupedPastryList.length > 0 && e('tfoot', { className: 'bg-slate-950 text-slate-100 font-black border-t-2 border-amber-500/60' },
                         e('tr', null,
                           e('td', { className: 'p-4 font-black text-amber-400 text-sm border-r border-slate-800/80 whitespace-nowrap' }, 'TỔNG CỘNG:'),
@@ -945,7 +957,7 @@
 
       // Login & Register Combined View
       function LoginView(props){
-        var modeState = useState('login'); // 'login' or 'register'
+        var modeState = useState('login');
         var mode = modeState[0];
         var setMode = modeState[1];
         var isRegister = mode === 'register';
